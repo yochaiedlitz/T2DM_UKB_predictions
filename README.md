@@ -1,1 +1,1 @@
-Non
+This repository contains the code used to derive the models of the paper "Devising applicable scorecards based on multivariate prediction models for the onset of type 2 diabetes in the UK BioBank" https://doi.org/10.1101/2020.08.02.20165092
