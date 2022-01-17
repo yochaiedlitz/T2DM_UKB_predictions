@@ -3,7 +3,7 @@ import os
 import numpy as np
 import sys
 from pysnptools.snpreader.bed import Bed
-import commands
+import subprocess
 cleanDataPath='/net/mraid08/export/jafar/Microbiome/Analyses/PNPChip/cleanData/'
 rawDataPath='/net/mraid08/export/jafar/Microbiome/Analyses/PNPChip/rawData'
 pheno_fn_bac =os.path.join(cleanDataPath,'noMissingKakiPhenotypesWithCovariates_nodfukim.phenotypes')
@@ -25,76 +25,76 @@ def extract(*args,**kwargs):
     ffq_args = ['activity','activityTypesFreq','cereals', 'delivery','dressSweetners','drinks','fruits','hunger', 
                   'legumes','meatProducts','pastry','qualityOfLiving', 'smoking','sweets','vegetables','womenOnlyQuestions']
     drug_args=['D.lipid', 'D.All', 'D.Psychiatric', 'D.pain', 'D.CVD', 'D.GI','D.Thyroid', 'D.NSAID','D.Contraception']
-    meals=[u'Vodka or Arak', u'Avocado', u'Parsley', u'Coated peanuts',
-       u'Sugar', u'Smoked Salmon', u'Melon', u'Roll', u'Whipped cream',
-       u'Coconut milk', u'Pretzels', u'Kohlrabi', u'Eggplant Salad',
-       u'Cooked green beans', u'Cooked mushrooms', u'Watermelon',
-       u'Grilled cheese', u'Bissli', u'Pullet', u'Hummus',
-       u'Chinese Chicken Noodles', u'Shakshouka', u'Tahini',
-       u'Chicken breast', u'Steak', u'Light Bread',
-       u'Wholemeal Crackers', u'Sugar Free Gum', u'Hamburger',
-       u'Dark Beer', u'Cooked beets', u'Almonds', u'Falafel', u'Noodles',
-       u'Jachnun', u'Turkey', u'Sushi', u'Brazil nuts', u'Orange', u'Rice',
-       u'Diet Fruit Drink', u'Corn schnitzel', u'Cappuccino',
-       u'Low fat Milk', u'Pickled cucumber', u'Soymilk',
-       u'Dates', u'Croissant', u'Biscuit', u'Potato chips',
-       u'White Cheese', u'French fries', u'Wholemeal Bread', u'Tuna Salad',
-       u'Chocolate spread', u'Kebab', u'Rice crackers', u'Wafers',
-       u'Lettuce', u'Rice Noodles', u'Lentils', u'Mutton',
-       u'Wholemeal Noodles', u'Green Tea', u'Schnitzel', u'Brown Sugar',
-       u'Peanuts', u'Mayonnaise', u'Persimmon', u'Apple juice',
-       u'Stuffed Peppers', u'Egg', u'Pear', u'Peas', u'Pecan',
-       u'Cooked cauliflower', u'Cooked Sweet potato', u'Butter',
-       u'Omelette', u'Coated Wafers', u'Boiled corn', u'Chicken drumstick',
-       u'Pita', u'Pasta Bolognese', u'Chicken Meatballs', u'Burekas',
-       u'Carrots', u'Tofu', u'Wholemeal Pita', u'Sunflower seeds',
-       u'Coriander', u'Ciabatta', u'Tomato sauce', u'Heavy cream',
-       u'Banana', u'Kif Kef', u'Mustard', u'Coke', u'Vegetable Soup',
-       u'Sausages', u'Pancake', u'Pasta', u'Sauteed vegetables', u'Plum',
-       u'Goat Milk Yogurt', u'Orange juice', u'Potatoes', u'Halva',
-       u'Yellow pepper', u'Mango', u'Lasagna', u'Popcorn', u'Hummus Salad',
-       u'Tilapia', u'Pizza', u'Fried cauliflower', u'Roasted eggplant',
-       u'Baguette', u'Lentil Soup', u'Tzfatit Cheese', u'Nectarine',
-       u'Chicken legs', u'Nuts', u'Goat Cheese', u'Jam', u'Feta Cheese',
-       u'Mandarin', u'Pesto', u'Sugar substitute', u'Cheesecake',
-       u'Raisins', u'Chocolate', u'Quinoa', u'Cooked broccoli',
-       u'Beef Cholent', u'Cracker', u'Chocolate Cookies', u'White beans',
-       u'Cooked zucchini', u'Sweet potato', u'Wine', u'Cookies',
-       u'Challah', u'Spelled', u'Honey', u'Green beans', u'Milk',
-       u'Peanut Butter', u'Cooked carrots', u'Lemon', u'Salty Cookies',
-       u'Beef', u'Meatballs', u'Hamburger sandwich', u'Chicken thighs',
-       u'Granola', u'Beet', u'Couscous', u'Beet Salad',
-       u'Chocolate Mousse Cake', u'Sweet Roll', u'Danish', u'Coffee',
-       u'Pasta Salad', u'Cuba', u'Chicken Liver', u'Sweet Challah',
-       u'Minced meat', u'Chocolate cake', u'Diet Coke', u'Dried dates',
-       u'Carrot Cake', u'Doritos', u'Israeli couscous', u'Pistachio',
-       u'Date honey', u'Vinaigrette', u'Bamba', u'Dark Chocolate',
-       u'Turkey Shawarma', u'Olive oil', #u'Parmesan\xc2\xa0cheese',
-       u'Guacamole', u'Coleslaw', u'Americano', u'Pesek Zman snack',
-       u'Green onions', u'Mushrooms', u'Lemon juice', u'Canned Tuna Fish',
-       u'Vegetable Salad', u'Fried eggplant', u'Salmon', u'Cashew',
-       u'Jewish donut', u'Rugelach', u'Cake', u'Ravioli', u'Tomatoes',
-       u'Wholemeal Light Bread', u'Marble Cake', u'Brown Rice',
-       u'Cold cut', u'Gilthead Bream', u'Garlic', u'Grapes',
-       u'Chocolate Chip Cookies', u'Cucumber', u'Mung Bean', u'Ketchup',
-       u'Sweet Yogurt', u'Bread', u'Onion', u'Cream Cheese',
-       u'Chicken soup', u'Wholemeal Roll', u'Canned corn', u'Salty Cheese',
-       u'Melawach', u'White cake', u'Apple', u'Lettuce Salad', u'Cereals',
-       u'Yellow Cheese', u'Tea', u'Beer', u'Mozzarella Cheese',
-       u'Fried onions', u'Ice cream', u'Cream Cake', u'Green cabbage',
-       u'Olives', u'Balsamic vinegar', u'Peach', u'Light Yellow Cheese',
-       u'Red pepper', u'Bagel', u'Entrecote', u'Cottage cheese', u'Oil',
-       u'Natural Yogurt', u'Walnuts', u'Edamame', u'Majadra', u'Oatmeal',
-       u'Soy sauce', u'Strawberry', u'Pastrami', u'Lemonade',
-        u'Pasta with tomato sauce', u'Chicken']#removed: u'Soda water',u'Water', u'Salt',
+    meals=['Vodka or Arak', 'Avocado', 'Parsley', 'Coated peanuts',
+       'Sugar', 'Smoked Salmon', 'Melon', 'Roll', 'Whipped cream',
+       'Coconut milk', 'Pretzels', 'Kohlrabi', 'Eggplant Salad',
+       'Cooked green beans', 'Cooked mushrooms', 'Watermelon',
+       'Grilled cheese', 'Bissli', 'Pullet', 'Hummus',
+       'Chinese Chicken Noodles', 'Shakshouka', 'Tahini',
+       'Chicken breast', 'Steak', 'Light Bread',
+       'Wholemeal Crackers', 'Sugar Free Gum', 'Hamburger',
+       'Dark Beer', 'Cooked beets', 'Almonds', 'Falafel', 'Noodles',
+       'Jachnun', 'Turkey', 'Sushi', 'Brazil nuts', 'Orange', 'Rice',
+       'Diet Fruit Drink', 'Corn schnitzel', 'Cappuccino',
+       'Low fat Milk', 'Pickled cucumber', 'Soymilk',
+       'Dates', 'Croissant', 'Biscuit', 'Potato chips',
+       'White Cheese', 'French fries', 'Wholemeal Bread', 'Tuna Salad',
+       'Chocolate spread', 'Kebab', 'Rice crackers', 'Wafers',
+       'Lettuce', 'Rice Noodles', 'Lentils', 'Mutton',
+       'Wholemeal Noodles', 'Green Tea', 'Schnitzel', 'Brown Sugar',
+       'Peanuts', 'Mayonnaise', 'Persimmon', 'Apple juice',
+       'Stuffed Peppers', 'Egg', 'Pear', 'Peas', 'Pecan',
+       'Cooked cauliflower', 'Cooked Sweet potato', 'Butter',
+       'Omelette', 'Coated Wafers', 'Boiled corn', 'Chicken drumstick',
+       'Pita', 'Pasta Bolognese', 'Chicken Meatballs', 'Burekas',
+       'Carrots', 'Tofu', 'Wholemeal Pita', 'Sunflower seeds',
+       'Coriander', 'Ciabatta', 'Tomato sauce', 'Heavy cream',
+       'Banana', 'Kif Kef', 'Mustard', 'Coke', 'Vegetable Soup',
+       'Sausages', 'Pancake', 'Pasta', 'Sauteed vegetables', 'Plum',
+       'Goat Milk Yogurt', 'Orange juice', 'Potatoes', 'Halva',
+       'Yellow pepper', 'Mango', 'Lasagna', 'Popcorn', 'Hummus Salad',
+       'Tilapia', 'Pizza', 'Fried cauliflower', 'Roasted eggplant',
+       'Baguette', 'Lentil Soup', 'Tzfatit Cheese', 'Nectarine',
+       'Chicken legs', 'Nuts', 'Goat Cheese', 'Jam', 'Feta Cheese',
+       'Mandarin', 'Pesto', 'Sugar substitute', 'Cheesecake',
+       'Raisins', 'Chocolate', 'Quinoa', 'Cooked broccoli',
+       'Beef Cholent', 'Cracker', 'Chocolate Cookies', 'White beans',
+       'Cooked zucchini', 'Sweet potato', 'Wine', 'Cookies',
+       'Challah', 'Spelled', 'Honey', 'Green beans', 'Milk',
+       'Peanut Butter', 'Cooked carrots', 'Lemon', 'Salty Cookies',
+       'Beef', 'Meatballs', 'Hamburger sandwich', 'Chicken thighs',
+       'Granola', 'Beet', 'Couscous', 'Beet Salad',
+       'Chocolate Mousse Cake', 'Sweet Roll', 'Danish', 'Coffee',
+       'Pasta Salad', 'Cuba', 'Chicken Liver', 'Sweet Challah',
+       'Minced meat', 'Chocolate cake', 'Diet Coke', 'Dried dates',
+       'Carrot Cake', 'Doritos', 'Israeli couscous', 'Pistachio',
+       'Date honey', 'Vinaigrette', 'Bamba', 'Dark Chocolate',
+       'Turkey Shawarma', 'Olive oil', #u'Parmesan\xc2\xa0cheese',
+       'Guacamole', 'Coleslaw', 'Americano', 'Pesek Zman snack',
+       'Green onions', 'Mushrooms', 'Lemon juice', 'Canned Tuna Fish',
+       'Vegetable Salad', 'Fried eggplant', 'Salmon', 'Cashew',
+       'Jewish donut', 'Rugelach', 'Cake', 'Ravioli', 'Tomatoes',
+       'Wholemeal Light Bread', 'Marble Cake', 'Brown Rice',
+       'Cold cut', 'Gilthead Bream', 'Garlic', 'Grapes',
+       'Chocolate Chip Cookies', 'Cucumber', 'Mung Bean', 'Ketchup',
+       'Sweet Yogurt', 'Bread', 'Onion', 'Cream Cheese',
+       'Chicken soup', 'Wholemeal Roll', 'Canned corn', 'Salty Cheese',
+       'Melawach', 'White cake', 'Apple', 'Lettuce Salad', 'Cereals',
+       'Yellow Cheese', 'Tea', 'Beer', 'Mozzarella Cheese',
+       'Fried onions', 'Ice cream', 'Cream Cake', 'Green cabbage',
+       'Olives', 'Balsamic vinegar', 'Peach', 'Light Yellow Cheese',
+       'Red pepper', 'Bagel', 'Entrecote', 'Cottage cheese', 'Oil',
+       'Natural Yogurt', 'Walnuts', 'Edamame', 'Majadra', 'Oatmeal',
+       'Soy sauce', 'Strawberry', 'Pastrami', 'Lemonade',
+        'Pasta with tomato sauce', 'Chicken']#removed: u'Soda water',u'Water', u'Salt',
     known_args+= ffq_args              
     known_args+= drug_args         
     known_kwargs = ['ratio', 'threshold','taxa']
     
     for arg in args: assert arg in known_args, 'unkown arg: %s'%(arg)
-    for kwarg in kwargs.keys(): assert kwarg in known_kwargs, 'unkown kwarg: %s'%(kwarg)
+    for kwarg in list(kwargs.keys()): assert kwarg in known_kwargs, 'unkown kwarg: %s'%(kwarg)
     if ('16s' in args): assert 'dic' not in args, '16s and dic are mutually exclusive'
-    if ('taxa' in kwargs.keys()): assert len(set(['all_bac','s', 'g','f','o','c','p','otu']).intersection(set(args)))==0, \
+    if ('taxa' in list(kwargs.keys())): assert len(set(['all_bac','s', 'g','f','o','c','p','otu']).intersection(set(args)))==0, \
     'taxa is mutual exclusive with all_bac,s,g,f,o,c,p,otu'
     if 'include_allPNP' in args: assert 'dic' not in args, 'include_allPNP does not support dicotomize bacteria'
     if 'IsGenotek' in args: assert 'covars' not in args, 'IsGenotek and covars are mutually exclusive'
@@ -114,7 +114,7 @@ def extract(*args,**kwargs):
             pheno =pandas.read_csv(pheno_fn_bac,sep='\t')
         pheno.set_index('IID', inplace=True, drop=True)
         if 'include_allPNP'in args:
-            status, output = commands.getstatusoutput("cut -f 1 %s -d ' ' | cut -f 1 -d '_'"%os.path.join(rawDataPath,'tmp','dfukim.txt'))
+            status, output = subprocess.getstatusoutput("cut -f 1 %s -d ' ' | cut -f 1 -d '_'"%os.path.join(rawDataPath,'tmp','dfukim.txt'))
             pheno =pheno[~pheno.index.isin([int(dafook) for dafook in output.split('\n')])]
         if ('16s' in args):
             pheno = pheno[[c for c in pheno if c[:2] not in ('s_', 'g_', 'f_', 'o_', 'c_', 'p_')]]
@@ -371,20 +371,20 @@ def extract(*args,**kwargs):
 if __name__=="__main__":
 #     pheno=extract('dic','covars','keep_household',"pastry",ratio=0.2)#'all_bac'
     phenoAll = extract('s','include_allPNP','covars')#'include_allPNP','keep_household','ffq','keep_related')#'include_allPNP',
-    print phenoAll.shape
-    print phenoAll.columns
+    print(phenoAll.shape)
+    print(phenoAll.columns)
     phenoAll = extract('s','include_allPNP')
-    print phenoAll.shape
-    print phenoAll.columns
+    print(phenoAll.shape)
+    print(phenoAll.columns)
     phenoChip = extract('keep_household','s','keep_related')
-    print phenoChip.shape
-    print phenoChip.columns
+    print(phenoChip.shape)
+    print(phenoChip.columns)
 #     print "Only in chip:"
 #     print set(phenoChip.index.values)-set(phenoAll.index.values)
 #     print len(set(phenoChip.index)-set(phenoAll.index))
     
-    print pheno.columns.values.tolist()
-    print pheno.shape 
+    print(pheno.columns.values.tolist())
+    print(pheno.shape) 
     sum=0
     for participant in  pheno[['Age','Gender']].index.values:
 #         if np.isnan(pheno.loc[participant,'Calories_kcal']) or \
@@ -396,7 +396,7 @@ if __name__=="__main__":
 #             print pheno.loc[participant,['Calories_kcal','Carbs_g','Fat_g','Protain_g','Protain_g']]
 #     print sum
         if np.isnan(pheno.loc[participant,'Age']) or np.isnan(pheno.loc[participant,'Gender']) :
-            print "Participant %s, age %s, gender %s" %(participant,pheno.loc[participant,'Age'],pheno.loc[participant,'Gender']) 
+            print("Participant %s, age %s, gender %s" %(participant,pheno.loc[participant,'Age'],pheno.loc[participant,'Gender'])) 
 #     print pheno[['median_Without_BMI_ALT_Overall']]
     
      

@@ -152,7 +152,7 @@ def compute_lr(job_name, Basic_folder_name="/home/edlitzy/UKBB_Tree_Runs/For_art
         X_train_fit = standarise_df(X_train_fit)
         X_test_fit = standarise_df(X_test_fit)
 
-    clf = LogisticRegressionCV(cv=Choose_N_Fold, random_state=0, penalty=penalty,
+    clf = LogisticRegressionCV(cv=Choose_N_Fold, random_state=None, penalty=penalty,
                                scoring=score, class_weight="balanced")
     clf.fit(X_train_fit, y_train.values.flatten())
 
@@ -163,7 +163,7 @@ def compute_lr(job_name, Basic_folder_name="/home/edlitzy/UKBB_Tree_Runs/For_art
 
 def pdf_save(pdf,current_figure=[],DPI=200,plot=False):
     if pdf:
-        print "saving pdf at plot_roc to: ",pdf
+        print("saving pdf at plot_roc to: ",pdf)
         plt.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0,rect=[0, 0.03, 1, 0.95])
         pdf.savefig(current_figure, dpi=DPI)
         plt.close(current_figure)
@@ -303,7 +303,7 @@ def plot_quantiles_curve(y_pred_val, y_test_val, test_label="Quantiles", bins=10
 
 def sort_csv(csvs_path):
     print(csvs_path)
-    print(glob.glob(csvs_path + "/*.csv"))
+    print((glob.glob(csvs_path + "/*.csv")))
     all_filenames = [i for i in glob.glob(csvs_path + "/*.csv")]  # combine all files in the list
     combined_csv = pd.concat([pd.read_csv(f, index_col=0) for f in all_filenames])
     combined_csv=combined_csv.sort_values(by="LR ROC AUC", ascending=False)
@@ -368,7 +368,7 @@ def summary_logistics_plots(Basic_folder_name, job_name, pdf_path, strategy='mos
     ax.set_title('Quantiles comparison', fontsize=12)
     pdf_save(pdf=pdf, current_figure=fig)
     pdf.close()
-    print("PDF save to: ",pdf_path)
+    print(("PDF save to: ",pdf_path))
 
 def main():
     with qp(jobname="LogReg", q=['himem7.q'], mem_def='4G', trds_def=1, tryrerun=True,max_u=650, delay_batch=30) as q:
@@ -379,13 +379,13 @@ def main():
         for ind,job_name in enumerate(relevant_folder_names):
             pdf_path=os.path.join(PDF_FOLDER_PATH,job_name+".pdf")
             param=(BASIC_FOLDER_NAME, job_name,pdf_path)
-            print "job_name:", job_name
+            print("job_name:", job_name)
             tkns.append(q.method(summary_logistics_plots, param))
             if ind == (len(relevant_folder_names) - 1):
                 print ("Waiting for create_PDF to finish")
                 q.waitforresults(tkns)
     results_df=sort_csv(os.path.join(BASIC_FOLDER_NAME, LR_folder_name))
-    print results_df
+    print(results_df)
 
 if __name__=="__main__":
     sethandlers()

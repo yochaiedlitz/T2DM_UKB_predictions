@@ -5,7 +5,7 @@ ALL_PATH='/net/mraid08/export/jafar/UKBioBank/Data/ukb29741.csv'
 tables_path="/home/edlitzy/UKBB_Tree_Runs/For_article/Tables/Statistics"
 returned_extended_path="/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_Diabetes_returned_extended_train.csv"
 returned_extended=pd.read_csv(returned_extended_path,index_col="eid")
-final_encoding_list=final_dict.keys()
+final_encoding_list=list(final_dict.keys())
 final_encoding_list.remove("eid")
 final_encoding_list_0=[x for x in final_encoding_list if x.endswith("0.0")]
 
@@ -14,7 +14,7 @@ final_dict["21003-4.0"]="Time between visits"
 # ## Describe all Data
 
 
-All_data_raw=pd.read_csv(ALL_PATH,usecols=all_data_dict.keys(),index_col="eid")
+All_data_raw=pd.read_csv(ALL_PATH,usecols=list(all_data_dict.keys()),index_col="eid")
 All_data=All_data_raw.copy()
 All_data.loc[:,["30750-0.0","30750-1.0"]]=All_data.loc[:,["30750-0.0","30750-1.0"]].apply(convert_hba1c_mmol_mol_2_percentage,axis=1)
 
@@ -83,9 +83,9 @@ all_returned_final=pd.concat([TRAIN_Val_data_final,test_data_final])
 df_returned_describe=all_returned_final.describe()
 df_returned_describe.to_csv(os.path.join(tables_path,"Returned_data_Stats.csv"),index=True)
 descrebtion_names_dict["returned"]=df_returned_describe.copy()
-stat_summary_table=pd.DataFrame(index=descrebtion_names_dict.keys())
+stat_summary_table=pd.DataFrame(index=list(descrebtion_names_dict.keys()))
 descrebtion_names_dict["returned"].columns.values
-for df_i in descrebtion_names_dict.keys():
+for df_i in list(descrebtion_names_dict.keys()):
     stat_summary_table.loc[df_i,"Number of participants"]=str(int(
         descrebtion_names_dict[df_i].loc["count","Sex"]))
     stat_summary_table.loc[df_i,"%Males"]=(
@@ -103,7 +103,7 @@ for df_i in descrebtion_names_dict.keys():
         try:
             stat_summary_table.loc[df_i,param]=str(
                 np.round(descrebtion_names_dict[df_i].loc["mean",param],
-                         decimals=1))+u"\u00B1"+str(
+                         decimals=1))+"\u00B1"+str(
                 np.round(descrebtion_names_dict[df_i].loc["std",param],
                          decimals=1))
         except:

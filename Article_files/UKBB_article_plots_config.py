@@ -1,4 +1,3 @@
-from UKBB_article_plots_functions import *
 from imports import *
 
 plt.rcParams['axes.facecolor'] = 'white'
@@ -48,8 +47,7 @@ final_dict = {
     "2443-3.0": "% Diabetic at last visit",
 
     "30750-0.0": "%Hba1c at first visit",
-    "30750-3.0": "%Hba1c at first return",
-    "30750-3.0": "%Hba1c at last visit",
+    "30750-3.0": "%Hba1c at last return",
 
     "21001-0.0": "BMI at first visit",
     "21001-3.0": "BMI at last visit",
@@ -65,7 +63,7 @@ final_dict = {
 
     "49-0.0": "Hips circumferance at first visit",
     "49-3.0": "Hips circumferance at last visit",
-    "Time between visits":"21003-4.0"
+    "21003-4.0":"Time between visits"
 
 }
 all_data_dict = {
@@ -111,10 +109,10 @@ column_names_list=['%Hba1c at last visit', 'Weight at first visit',
        'Height at first visit',
        'Age at last visit', 'Waist circumfurance at first visit',
        'Hips circumferance at first visit', 'Height at last visit',
-       'BMI at first visit', '%Hba1c at first visit',
+       'BMI at first visit', '%Hba1c at first visit',"%Hba1c at last return",
        'Age at first visit', 'BMI at last visit','Time between visits']
 
-final_encoding_list = final_dict.keys()
+final_encoding_list = list(final_dict.keys())
 final_encoding_list.remove("eid")
 final_encoding_list_0 = [x for x in final_encoding_list if x.endswith("0.0")]
 

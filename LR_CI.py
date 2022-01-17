@@ -6,15 +6,18 @@ import os
 from sklearn.linear_model import LogisticRegressionCV
 from sklearn.metrics import roc_auc_score, make_scorer, roc_curve, auc, average_precision_score, precision_recall_curve
 import sys
-from addloglevels import sethandlers
-from sklearn.externals import joblib
+# from sklearn.externals import joblib
 import pickle
 from UKBB_Functions import Filter_CZ  # SAVE_FOLDER, RUN_NAME,
 # from Scoreboards.UKBB_Scoreboard_functions import *
 from sklearn.metrics import brier_score_loss
 import shutil
-
-
+from LabData import config_global as config
+from LabUtils.addloglevels import sethandlers
+from LabQueue.qp import fakeqp
+import os
+import time
+from imports import standarise_df
 CHARAC_ID = {"Age at last visit": "21003-3.0", "Sex": "31-0.0", "Ethnic background": "21000-0.0",
              "Type of special diet followed": "20086-0.0"}
 ETHNIC_CODE = {-3: "Prefer not to answer", -1: "Do not know", 1: "White", 2: "Mixed", 3: "Asian",
@@ -31,16 +34,8 @@ def roc_auc_score_proba(y_true, proba):
     return roc_auc_score(y_true, proba)
 
 
-def standarise_df(df):
-    fit_col = df.columns
-    x_std_col = [x for x in fit_col if not x.endswith("_na")]
-    x_na_col = [x for x in fit_col if x.endswith("_na")]
-    x_train_std = df[x_std_col]
-    x_train_std = (x_train_std - np.mean(x_train_std, axis=0)) / np.std(x_train_std, axis=0)
-    x_train_std_na_col = x_train_std.loc[:, x_train_std.isna().sum() > 0].columns.values
-    x_train_std.loc[:, x_train_std.isna().sum() > 0] = df.loc[:, x_train_std_na_col]
-    x_train_std[x_na_col] = df[x_na_col]
-    return x_train_std
+
+
 
 
 # def Filter_CZ(Features_DF, charac_selected,charac_id):  # CHARAC_SELECTED = {"Age at recruitment": "All", "Sex": "Female", "Ethnic background":
@@ -170,11 +165,11 @@ def compute_lr(run_object, mode, Batch_number, penalizer=[], Choose_N_Fold=3, fo
         X_test, y_test = load_lr_data(run_object, test_file_path, mode=mode, standardise=run_object.standardise,
                                       force_update=force_update)
 
-        clf = LogisticRegressionCV(cv=Choose_N_Fold, random_state=0, penalty="l2",
+        clf = LogisticRegressionCV(cv=Choose_N_Fold, random_state=None, penalty="l2",
                                    scoring=score, class_weight=run_object.class_weight, Cs=[penalizer])
         try:
             clf.fit(X_train, y_train.values.flatten())
-            print ("fitting SN:", SN, " was succesful")
+            print(("fitting SN:", SN, " was succesful"))
             if run_object.save_model:
                 pickle.dump(clf, open(os.path.join(path, "LR_model_" + str(int(SN)) + ".sav"), 'wb'))
             y_proba = clf.predict_proba(X_test)
@@ -190,7 +185,7 @@ def compute_lr(run_object, mode, Batch_number, penalizer=[], Choose_N_Fold=3, fo
             results_df.to_csv(os.path.join(path, "AUC_APS_results_" + str(int(SN)) + ".csv"), index=True)
             prediction_DF.to_csv(os.path.join(path, "y_pred_results_" + str(int(SN)) + ".csv"))
         except:
-            print ("fitting SN:", SN, " FAILED")
+            print(("fitting SN:", SN, " FAILED"))
             AUC_dict[str(SN)] = None
             APS_dict[str(SN)] = None
     return AUC_dict, APS_dict
@@ -210,19 +205,19 @@ def optimal_params(run_object, name_start="AUC_APS_results_", ind_col="SN"):
 
 
 def LR_CI(run_name, force_update=True,run_object=None,debug = False,calc_new_training=True):  # mode should be explore or None
-    sethandlers()  # set handlers for queue_tal jobs
-    Qworker = '/home/edlitzy/pnp3/lib/queue_tal/qworker.py'
+      # set handlers for queue_tal jobs
     if run_object is None:
         run_object = runs(run_name=run_name, force_update=force_update,debug=debug)
     if run_object.debug or debug:
-        from queue_tal.qp import fakeqp as qp
+        qp=fakeqp
         print("Running in debug mode!!!!!!!!!!")
     else:
-        from queue_tal.qp import qp
-
-    with qp(jobname="HP" + run_name, q=['himem7.q'], mem_def='4G', trds_def=2, tryrerun=False, max_u=650,
-            delay_batch=20, qworker=Qworker) as q:
-        os.chdir('/net/mraid08/export/jafar/Microbiome/Analyses/Edlitzy/tempq_files/')
+        qp=config.qp
+    # sethandlers(config.log_dir)
+    sethandlers()
+    os.chdir('/net/mraid08/export/jafar/Microbiome/Analyses/Edlitzy/tempq_files/')
+    with qp(jobname="HP" + run_name, q=['himem7.q'],_mem_def='4G', _trds_def=2,
+            _tryrerun=False, max_r=650) as q:
         q.startpermanentrun()
         tkns = []
         # TODO check if model exists
@@ -237,29 +232,38 @@ def LR_CI(run_name, force_update=True,run_object=None,debug = False,calc_new_tra
                 calc_new_training=True
         if calc_new_training:
             for BN in np.arange(num_of_hy_par_batches):
-                print ("Building LR training batch number", BN, "for", run_name)
+                print(("Building LR training batch number", BN, "for", run_name))
                 tkns.append(q.method(compute_lr, [run_object, "Train", BN, False]))
                 if BN == num_of_hy_par_batches - 1:
                     q.wait(tkns, assertnoerrors=False)
             params, _ = optimal_params(run_object)
-            print ("Training optimal parameters", params)
+            print(("Training optimal parameters", params))
 
         penalizer = params["penalizer"]
-    with qp(jobname="CI" + run_name, q=['himem7.q'], mem_def='4G', trds_def=1, tryrerun=False, max_u=650,
-            delay_batch=10, qworker=Qworker) as q:
-        os.chdir('/net/mraid08/export/jafar/Microbiome/Analyses/Edlitzy/tempq_files/')
+    with qp(jobname="CI" + run_name, q=['himem7.q'], _mem_def='4G', _trds_def=1,
+            _tryrerun=False, max_r=650) as q:
         q.startpermanentrun()
         if run_object.compute_CI:
             num_of_CI_batches = np.ceil((float(run_object.num_of_bootstraps) / run_object.batch_size))
             waiton = []
             for BN in np.arange(num_of_CI_batches):
-                print ("Computing validation number", BN, ", for:", run_name)
-                waiton.append(q.method(compute_lr, [run_object, "Val", BN, penalizer]))
+                print(("Computing validation number", BN, ", for:", run_name))
+                waiton.append(
+                    q.method(compute_lr, [run_object, "Val", BN, penalizer]))
             q.wait(waiton, assertnoerrors=False)
             run_object.calc_CI()
 
 #LR_Five_blood_tests_scoreboard / LR_Anthro_scoreboard/LR_Anthro_scoreboard_explore
+#
+# "LR_Socio_demographics","LR_Age_and_Sex","LR_Physical_health",
+# "LR_Mental_health","LR_Medication","LR_Lifestyle_and_physical_activity",
+# "LR_HbA1c","LR_Family_and_Ethnicity","LR_Early_Life_Factors","LR_Diet",
+# "LR_BT_No_A1c_No_Gluc","LR_BT_No_A1c","LR_BP_and_HR","LR_Blood_Tests",
+# "LR_Five_Blood_Tests","LR_All_No_gen":
+
+#LR_A1_BT__Anthro,"LR_A2_Anthro__Physical_Health" ,"LR_A3_Physical_Health__Lifestyle" ,"LR_A4_Lifestyle__BP_n_HR" \
+#,"LR_A5_BP_n_HR__ND_Diagnosis" ,"LR_A6_ND_Diagnosis__Mental","LR_A7_Mental__Medication","LR_A8_Medication__Diet" \
+#,"LR_A9_Diet__Family","LR_A10_Family__ELF" ,"LR_A11_ELF__Socio","LR_All_No_A1c_No_Gluc":
 if __name__=="__main__":
-    run_name = "LR_Finrisc"
-    sethandlers()
-    LR_CI(run_name=run_name)
+    run_name ="LR_All_No_gen"# LR_Antro_neto_whr"#LR_No_reticulocytes"LR_Finrisc"#"LR_Strat_L39_Antro_neto_whr"#
+    LR_CI(run_name=run_name,debug=False)

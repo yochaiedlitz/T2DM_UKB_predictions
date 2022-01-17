@@ -11,6 +11,7 @@ import numpy as np
 import collections  # Used for ordered dictionary
 import lightgbm as lgb
 import shap
+import re
 # import Create_Prob
 
 from sklearn.model_selection import train_test_split, RandomizedSearchCV, GridSearchCV, GroupKFold, StratifiedKFold
@@ -68,7 +69,7 @@ def roc_auc_score_proba(y_true, proba):
 def Choose_params(Hyp_params):
     params_dict = {}
     # for key in Hyp_params.keys():
-    for key, vals in Hyp_params.iteritems():
+    for key, vals in Hyp_params.items():
         if type(vals) == list:
             params_dict[key] = random.choice(Hyp_params[key])
         else:
@@ -101,9 +102,9 @@ def Sort_AUC_APS(job_name, Save_2_folder, final_folder, Target_ID, proba_path, c
     # Meging the parameters file
 
     path = os.path.join(Save_2_folder, '*parameters.csv')
-    print("Sort_AUC_APS concatanation path:", path)
+    print(("Sort_AUC_APS concatanation path:", path))
     allFiles = glob.glob(path)
-    print("allFiles:", allFiles)
+    print(("allFiles:", allFiles))
     frame = pd.DataFrame()
     list_ = []
 
@@ -115,7 +116,7 @@ def Sort_AUC_APS(job_name, Save_2_folder, final_folder, Target_ID, proba_path, c
         if os.path.isfile(file_):
             os.remove(file_)
         else:  # Show an error ##
-            print("Error: %s file not found" % file_)
+            print(("Error: %s file not found" % file_))
     frame = pd.concat(list_, axis=1)
     frame.index_name = "parameter"
     frame.columns = frame.loc["SN", :]
@@ -128,7 +129,7 @@ def Sort_AUC_APS(job_name, Save_2_folder, final_folder, Target_ID, proba_path, c
 
 def print_to_file(result, job_name, final_folder, Save_2_folder, frame, Target_ID
                   , proba_path, calc_shap, mode, use_proba, pdf_name, Refit_Base_Model_Path):
-    print("pdf name in print_to_file is:", pdf_name)  # TODO:
+    print(("pdf name in print_to_file is:", pdf_name))  # TODO:
 
     y_train, X_train, y_test_df, y_test, X_test, cat_names, Rel_Feat_Names = Load_Saved_Data(final_folder, Lite=False)
     metric = frame.loc["metric"].iloc[0]
@@ -172,12 +173,12 @@ def create_pdf(Save_2_folder, final_folder, job_name, Target_ID, proba_path, cal
     parameters.columns = parameters.loc["SN", :]
     parameters.drop(index="SN", inplace=True)
     metric = str(parameters.loc["metric", run_name])
-    print("metric is: ", metric)
-    print("pdf name in create_pdf is:", pdf_name)
+    print(("metric is: ", metric))
+    print(("pdf name in create_pdf is:", pdf_name))
     SHAP_PDF_PATH = os.path.join(final_folder , pdf_name + "_" + run_name + ".pdf")
-    print("saving pdf at: ", SHAP_PDF_PATH)
+    print(("saving pdf at: ", SHAP_PDF_PATH))
     pdf = PdfPages(SHAP_PDF_PATH)
-    if isinstance(parameters, (list,)):
+    if isinstance(parameters, list):
         params_dict = parameters[run_name].to_dict()
     else:
         params_dict = parameters.to_dict()[run_name]
@@ -196,7 +197,7 @@ def create_pdf(Save_2_folder, final_folder, job_name, Target_ID, proba_path, cal
 
     evals_result = {}  # to record eval results for plotting
     start_time = time.time()
-    print('Start training non-shap values of final model of: ', job_name, " at:", datetime.datetime.now())
+    print(('Start training non-shap values of final model of: ', job_name, " at:", datetime.datetime.now()))
     num_trees = int(params_dict["num_boost_round"])
     if use_proba:
         if Refit_Base_Model_Path == None:
@@ -224,7 +225,7 @@ def create_pdf(Save_2_folder, final_folder, job_name, Target_ID, proba_path, cal
                             valid_names=["Train"], feature_name=Rel_Feat_Names,
                             evals_result=evals_result, verbose_eval=VERBOSE_EVAL)  #
 
-    print("Final training of ", job_name, " took %s seconds ---" % (time.time() - start_time))
+    print(("Final training of ", job_name, " took %s seconds ---" % (time.time() - start_time)))
     gbm.save_model(os.path.join(final_folder , run_name + '_lgbm.txt'))
 
     with open(os.path.jopin(final_folder , "evals_result"), 'wb') as fp:
@@ -254,7 +255,7 @@ def create_pdf(Save_2_folder, final_folder, job_name, Target_ID, proba_path, cal
 
         X_test.drop(job_name + "Y_PROB", axis=1, inplace=True)
 
-    print('Finished predicting...', job_name, "at time:", datetime.datetime.now())
+    print(('Finished predicting...', job_name, "at time:", datetime.datetime.now()))
 
     y_pred_val = []
     y_test_val = []
@@ -293,9 +294,9 @@ def create_pdf(Save_2_folder, final_folder, job_name, Target_ID, proba_path, cal
         Calc_SHAP(final_folder, pdf, job_name, gbm)
 
     pdf.close()
-    print("finished Create_PDF for:", job_name, " at:", datetime.datetime.now())
-    print("Finished", job_name)
-    print("saved PDF at:", SHAP_PDF_PATH)
+    print(("finished Create_PDF for:", job_name, " at:", datetime.datetime.now()))
+    print(("Finished", job_name))
+    print(("saved PDF at:", SHAP_PDF_PATH))
 
 
 def plot_only(final_folder, calc_shap, job_name, gbm=None):
@@ -328,8 +329,8 @@ def plot_only(final_folder, calc_shap, job_name, gbm=None):
         Calc_SHAP(final_folder, pdf, job_name, gbm)
 
     pdf.close()
-    print("finished Create_PDF for:", job_name, " at:", datetime.datetime.now())
-    print("Finished", job_name)
+    print(("finished Create_PDF for:", job_name, " at:", datetime.datetime.now()))
+    print(("Finished", job_name))
 
 
 def Calc_SHAP(final_folder, pdf, job_name, gbm):
@@ -343,7 +344,7 @@ def Calc_SHAP(final_folder, pdf, job_name, gbm):
     parameters.index_name = "parameter"
     parameters.columns = parameters.loc["SN", :]
     parameters.drop(index="SN", inplace=True)
-    if isinstance(parameters, (list,)):
+    if isinstance(parameters, list):
         params_dict = parameters[run_name].to_dict()
     else:
         params_dict = parameters.to_dict()[run_name]
@@ -351,7 +352,7 @@ def Calc_SHAP(final_folder, pdf, job_name, gbm):
     cat_ind = [x for x, name in enumerate(Rel_Feat_Names) if name in cat_names]
 
     evals_result = {}  # to record eval results for plotting
-    print("Calculating SHAP Values for:", job_name, " at:", datetime.datetime.now())
+    print(("Calculating SHAP Values for:", job_name, " at:", datetime.datetime.now()))
     shap_values = gbm.predict(X_test.values, pred_contrib=True, num_threads=10)
     gbm.save_model(os.path.join(final_folder , job_name + "_shap_model.txt"))
     df = pd.DataFrame(shap_values,index=X_test.index,columns=X_test.columns)
@@ -393,7 +394,7 @@ def Calc_SHAP(final_folder, pdf, job_name, gbm):
         Sorted_Question.drop_duplicates(keep="first", inplace=True)
         # Sorted_Question.loc[:,"Score"] = ranks
         Sorted_Question.to_csv(os.path.join(final_folder, job_name + "_Features_List_Shap_Sorted.csv"))
-    print("Printing Dependence plot for:", job_name, " at:", datetime.datetime.now())
+    print(("Printing Dependence plot for:", job_name, " at:", datetime.datetime.now()))
 
     for name in Ordered_X_idx[0:NUM_OF_DEP_PLOT]:
         fig = plt.figure(figsize=(20, 20))
@@ -510,7 +511,7 @@ def plot_calibration_curve(y_test, prob_pos, pdf, path, Print_Benefit=True):
         y = np.array(y_test)
 
         ir = IsotonicRegression()
-        skf = StratifiedKFold(n_splits=10, random_state=0, shuffle=False)
+        skf = StratifiedKFold(n_splits=10, random_state=None, shuffle=False)
         y_true_list = []
         y_cal_prob_list = []
         for train_index, test_index in skf.split(X, y):
@@ -737,9 +738,9 @@ def Filter_CZ(Features_DF, charac_selected,
 def Load_Targets(Target_ID, Sub_Class_ID, visits, nrows_return, no_symp_codes, data_path):
     DF_Targets = []
     for ind, name in enumerate(visits):
-        print("Load Tergets of visits: ", str(name))
+        print(("Load Tergets of visits: ", str(name)))
         if ind == 0:
-            if isinstance(nrows_return, (int, long)):
+            if isinstance(nrows_return, int):
                 nrows_0 = nrows_return * 5
                 DF_Targets.append(pd.read_csv(data_path, usecols=[Target_ID[:-4] + "-" + str(name) + ".0", "eid"],
                                               index_col='eid', nrows=nrows_0))
@@ -770,9 +771,9 @@ def Load_Targets(Target_ID, Sub_Class_ID, visits, nrows_return, no_symp_codes, d
 
     if nrows_return != 'None':
         if Targets.shape[0] > nrows_return:
-            print("original targets shape:", str(Targets.shape[0]))
+            print(("original targets shape:", str(Targets.shape[0])))
             Targets = Targets.iloc[0:nrows_return]
-            print("Current targets shape:", str(Targets.shape[0]))
+            print(("Current targets shape:", str(Targets.shape[0])))
 
     # Targets.to_csv(fname, header=True, index=True)
 
@@ -823,14 +824,14 @@ def Load_N_Data(data_path, Target_ID, final_folder, Sub_Class_ID, job_name, feat
             with open(os.path.join(final_folder, job_name + "test_Data"), 'rb') as fp:
                 Data=pickle.load(fp)
     else:
-        print("mode is:", mode)
+        print(("mode is:", mode))
         Target_ID = str(Target_ID)  # Medical conditions
-        print("Target ID is: ", Target_ID)
+        print(("Target ID is: ", Target_ID))
 
         data_cols = pd.read_csv(data_path, index_col="eid", nrows=0)
 
         # ~~~~~~~~~~~~~~~Loading Targets~~~~~~~~~~~~~~
-        print("mode is:", mode)
+        print(("mode is:", mode))
         if mode == "R":
             # DF_Targets = Load_Targets(Target_ID, Sub_Class_ID,visits,nrows_return,no_symp_dict[Target_ID],
             #                           data_path=data_path)#no_symp_dict[Target_ID] - alist of codes to be identified as no symptom
@@ -842,7 +843,7 @@ def Load_N_Data(data_path, Target_ID, final_folder, Sub_Class_ID, job_name, feat
                                                  data_path=data_path)
                 # DF_Targets = Load_Targets(Target_ID, Sub_Class_ID, visits, nrows_return, no_symp_dict[Target_ID])  # no_symp_dict[Target_ID] - alist of codes to be identified as no symptom
 
-                if isinstance(nrows_return, (int, long)):
+                if isinstance(nrows_return, int):
                     n_rows = nrows_return * 5
                 DF_Targets = pd.read_csv(data_path, usecols=[Target_ID, "eid"], index_col='eid', nrows=n_rows)
                 DF_Targets = Order_Targets(DF_Targets, no_symp_dict[Target_ID], Sub_Class_ID)
@@ -896,7 +897,7 @@ def Load_N_Data(data_path, Target_ID, final_folder, Sub_Class_ID, job_name, feat
                          in Feat_DF_eid.index.values if y==x]
         else:
             cat_names = []
-        print("Loading all Feaures, n_rows:", str(n_rows))
+        print(("Loading all Feaures, n_rows:", str(n_rows)))
         if "30750-0.0" not in filtered_cols:
             df_Features = pd.read_csv(data_path, index_col="eid", usecols=filtered_cols + ["30750-0.0"], nrows=n_rows)
             filtered_cols = [x for x in filtered_cols if not (x.startswith("30750-") or x == "eid")]
@@ -904,9 +905,9 @@ def Load_N_Data(data_path, Target_ID, final_folder, Sub_Class_ID, job_name, feat
             df_Features = pd.read_csv(data_path, index_col="eid", usecols=filtered_cols, nrows=n_rows)
             filtered_cols = df_Features.columns.values
 
-        print('df_Features size before filtering nan', df_Features.shape)
+        print(('df_Features size before filtering nan', df_Features.shape))
 
-        print("Loaded size of Features is: ", df_Features.shape[0])
+        print(("Loaded size of Features is: ", df_Features.shape[0]))
         mut_ind = list(set(df_Features.index.values).intersection(DF_Targets.index.values))
         df_Features = df_Features.loc[mut_ind, :]
 
@@ -920,14 +921,14 @@ def Load_N_Data(data_path, Target_ID, final_folder, Sub_Class_ID, job_name, feat
         elif Thresh_in_Row > 0:
             df_Features.dropna(axis=0, thresh=Thresh_in_Row, inplace=True)
 
-        print("Feature and Targets Mutual size of Features is: ", df_Features.shape[1])
+        print(("Feature and Targets Mutual size of Features is: ", df_Features.shape[1]))
 
         # df_Features.dropna(subset=[df_Features.columns.values[0]], inplace=True)
         df_Features = Filter_CZ(df_Features, charac_selected, charac_id)
-
+        filtered_cols=[x for x in filtered_cols if x in df_Features.columns]
         df_Features = df_Features.loc[:, filtered_cols]
 
-        print("size of Features after filter_CZ: ", df_Features.shape[0])
+        print(("size of Features after filter_CZ: ", df_Features.shape[0]))
 
         if df_Features.shape[0] != 0:
             Rel_Feat = [k for k in df_Features.columns.values]
@@ -964,16 +965,16 @@ def Load_N_Data(data_path, Target_ID, final_folder, Sub_Class_ID, job_name, feat
             else:
                 how_merge = "outer"
                 print("PRS head():")
-                print(PRS_DF.head())
-            print("PRS columns: ", PRS_DF.columns.values)
+                print((PRS_DF.head()))
+            print(("PRS columns: ", PRS_DF.columns.values))
             df_Features = PRS_DF.join(df_Features, how=how_merge, on="eid")
             exist_prs_col = PRS_DF.columns.values
             non_used_prs_names = [x for x in prs_cols if x not in prs_use_col]
-            print("non used prs columns ", non_used_prs_names)
+            print(("non used prs columns ", non_used_prs_names))
             df_Features = df_Features.reset_index().drop_duplicates(subset='eid', keep='first').set_index("eid")
             # df_Features.dropna(axis = "columns",thresh=int(0.5*df_Features.shape[0]), inplace=True)
             prs_list = [item for item in PRS_DF.columns.values]
-            print("size of Features after PRS: ", df_Features.shape[0])
+            print(("size of Features after PRS: ", df_Features.shape[0]))
             Rel_Feat_Names = prs_list + Rel_Feat_Names
 
         if Use_SNPs:  # Adding specific SNPs values (top 1000 SNPs that are significant according to PRS)
@@ -982,7 +983,7 @@ def Load_N_Data(data_path, Target_ID, final_folder, Sub_Class_ID, job_name, feat
                 how_merge = "inner"
             else:
                 how_merge = "outer"
-            for ind, (trait, Genes_file) in enumerate(Select_Traits_Gen.iteritems()):
+            for ind, (trait, Genes_file) in enumerate(Select_Traits_Gen.items()):
                 print(trait)
                 Gen_DF = pd.read_csv(filepath_or_buffer=Genes_file, index_col="eid")
                 temp_Gen_col = Gen_DF.columns.values
@@ -994,10 +995,15 @@ def Load_N_Data(data_path, Target_ID, final_folder, Sub_Class_ID, job_name, feat
                 df_Features = df_Features.reset_index().drop_duplicates(subset='eid', keep='first').set_index("eid")
             Rel_Feat_Names = Rel_Feat_Names + Genes_col
             cat_names = list(cat_names) + Genes_col
-            cat_names = [x for x in cat_names if x in Rel_Feat_Names]
+            cat_names = [re.sub('[^A-Za-z0-9_]+', '_', x) for x in cat_names if x in Rel_Feat_Names]
+            Rel_Feat_Names=[re.sub('[^A-Za-z0-9_]+', '_', x) for x in Rel_Feat_Names]
             # df_Features.dropna(axis="columns", thresh=int(0.5*df_Features.shape[0]), inplace=True)
 
-            print("size of Features after Genes: ", df_Features.shape[0])
+            print(("size of Features after Genes: ", df_Features.shape[0]))
+
+        cat_names = [re.sub('[^A-Za-z0-9_]+', '_', x) for x in cat_names if x in Rel_Feat_Names]
+        Rel_Feat_Names=[re.sub('[^A-Za-z0-9_]+', '_', x) for x in Rel_Feat_Names]
+        df_Features=df_Features.rename(columns = lambda x:re.sub('[^A-Za-z0-9_]+', '_', x))
         mut_ind = list(set(df_Features.index.values).intersection(DF_Targets.index.values))
         df_Features = df_Features.loc[mut_ind, :]
         DF_Targets = DF_Targets.loc[mut_ind]
@@ -1081,7 +1087,8 @@ def Load_N_Data(data_path, Target_ID, final_folder, Sub_Class_ID, job_name, feat
                     'X_val': X_val,
                     'Rel_Feat_Names': Rel_Feat_Names}
         else:
-            Data = {'df_Features': df_Features, 'DF_Targets': DF_Targets, 'X_display': X_display, 'X_train': X_train,
+            Data = {'df_Features': df_Features, 'DF_Targets': DF_Targets, 'X_display': X_display,
+                    'X_train': X_train,
                     'y_train': y_train, 'y_test': y_test, 'X_test': X_test, 'cat_names': cat_names,
                     'Rel_Feat_Names': Rel_Feat_Names}
         if train_set == True:
@@ -1115,7 +1122,8 @@ def Load_Saved_Data(Data_Folder, Lite, mode="A"):
         return y_test_df, y_test, X_test, cat_names, Rel_Feat_Names
 
 
-def Predict(SN, parameters, Save_2_folder, job_name, final_folder, n_fold, use_proba=True, Refit_Base_Model_Path=None):
+def Predict(SN, Save_2_folder, job_name, final_folder,
+            n_fold, use_proba=True, Refit_Base_Model_Path=None,Hyp_Param_Dict=None):
     with open(os.path.join(final_folder , job_name + "train_Data"), 'rb') as fp:
         Data = pickle.load(fp)
     y_train = Data["y_train"].values.flatten()
@@ -1142,14 +1150,14 @@ def Predict(SN, parameters, Save_2_folder, job_name, final_folder, n_fold, use_p
                            free_raw_data=False, feature_name=Rel_Feat_Names)
     evals_result = {}  # to record eval results for plotting
 
-    print("---Start training non-shap values of  model : ", str("SN"),
-          ", at Predict, at time: %s ---" % datetime.datetime.now())
+    print(("---Start training non-shap values of  model : ", str("SN"),
+          ", at Predict, at time: %s ---" % datetime.datetime.now()))
 
     # cv_result = lgb.cv(params=parameters, train_set=lgb_train, feature_name=Rel_Feat_Names,nfold=n_fold,
     #                    stratified=True, shuffle=False)
     start_time = time.time()
     parameters_bu = parameters
-    print
+    print()
     "parameters before train:", parameters
     num_trees = int(parameters['num_boost_round'])
     if Refit_Base_Model_Path == None:
@@ -1158,49 +1166,49 @@ def Predict(SN, parameters, Save_2_folder, job_name, final_folder, n_fold, use_p
                         feature_name=Rel_Feat_Names, evals_result=evals_result, verbose_eval=VERBOSE_EVAL)  #
     else:
         Base_gbm = lgb.Booster(model_file=Refit_Base_Model_Path)
-        print
+        print()
         "Num of trees before refit:", str(Base_gbm.num_trees())
         gbm = lgb.train(init_model=Refit_Base_Model_Path, params=parameters,
                         num_boost_round=Base_gbm.num_trees() + num_trees,
                         train_set=lgb_train, valid_sets=[lgb_train, lgb_test], valid_names=["Train", "Valid"],
                         feature_name=Rel_Feat_Names, evals_result=evals_result, verbose_eval=VERBOSE_EVAL)
-        print
+        print()
         "Num of trees After refit:", str(gbm.num_trees())
 
     gbm.save_model(os.path.join(final_folder , job_name + "_CV_Model_" + run_name + ".txt"))
-    print
+    print()
     "parameters after training:", parameters
     parameters = parameters_bu
 
-    print
+    print()
     evals_result
     cv_pd = pd.DataFrame([{"SN": run_name, "score": evals_result['Valid'][parameters['metric']][-1]}])
     cv_pd.set_index("SN", drop=True, inplace=True)
     cv_pd.to_csv(os.path.join(Save_2_folder,run_name + '_cv_result.csv'))
 
     params_df.loc["SN"] = SN
-    print
+    print()
     "Save params_df in predict to: ", Save_2_folder, run_name, "_parameters.csv"
     params_df.to_csv(os.path.join(Save_2_folder , run_name + "_parameters.csv"))
 
 
 def Load_Prob_Based_Data(Target_ID, final_folder, Data_Folder, Sub_Class_ID, job_name, feat_path, no_symp_code,
                          nrows_return, disease_proba_dict, use_proba, Lite="False", HowHow="left"):
-    print("Feat path is: ", feat_path)
+    print(("Feat path is: ", feat_path))
     y_test_df, y_test, X_test, cat_names, Rel_Feat_Names = Load_Saved_Data(Data_Folder, Lite, "R")
     df_Features = X_test
 
     if use_proba:
-        for key, value in disease_proba_dict.iteritems():
+        for key, value in disease_proba_dict.items():
             print(key)
             if os.path.isfile(value):
                 new_proba = pd.read_csv(value, nrows=X_test.shape[0], index_col="eid")
                 df_Features = df_Features.join(new_proba, how=HowHow)
                 df_Features.columns.values[-1] = key
                 Rel_Feat_Names = Rel_Feat_Names + list(df_Features.columns.values[len(Rel_Feat_Names):])
-                print("Probability file for ", key, " loaded from:", value)
+                print(("Probability file for ", key, " loaded from:", value))
             else:
-                print("Probability file for ", key, " does not exist at: ", value)
+                print(("Probability file for ", key, " does not exist at: ", value))
         print(Rel_Feat_Names)
 
     DF_Targets = y_test_df.loc[df_Features.index.values]
@@ -1210,7 +1218,7 @@ def Load_Prob_Based_Data(Target_ID, final_folder, Data_Folder, Sub_Class_ID, job
 
     print("Load FEATURES of FIRST visit")
 
-    print("size of Features is: ", df_Features.shape[0])
+    print(("size of Features is: ", df_Features.shape[0]))
     ###~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     with open(os.path.join(final_folder,"y_test"), 'wb') as fp:
@@ -1235,19 +1243,21 @@ def Load_Prob_Based_Data(Target_ID, final_folder, Data_Folder, Sub_Class_ID, job
     return Data
 
 
-def Predict_prob(BN, parameters, X, y, cat_names, Rel_Feat_Names, Save_2_folder, job_name, n_fold, final_folder,
-                 Refit_Return_Model_Path, Refit_Returned,batch_size):
+def Predict_prob(BN, X, y, cat_names, Rel_Feat_Names, Save_2_folder, n_fold, final_folder,
+                 Refit_Return_Model_Path, Refit_Returned,batch_size,Hyp_Param_Dict):
     for ind in np.arange(batch_size):
         SN=int(batch_size*BN+ind)
+        parameters = Choose_params(Hyp_Param_Dict)
+
         run_name = str(SN)
-        print("Rel_Feat_Names:", Rel_Feat_Names)
-        print("started predict prob of SN:", run_name," in BN:", BN)
+        print(("Rel_Feat_Names:", Rel_Feat_Names))
+        print(("started predict prob of SN:", run_name," in BN:", BN))
         path = os.path.join(Save_2_folder,"SN" + run_name + "_parameters.csv")
         start_time = time.time()
         cv_ind = 0
         Test_ind_list = []
         Train_ind_list = []
-        skf = StratifiedKFold(n_splits=n_fold, random_state=0, shuffle=False)
+        skf = StratifiedKFold(n_splits=n_fold, shuffle=False)
         num_of_trees = parameters['num_boost_round']
         if Refit_Returned:  # model to refit
             if Refit_Return_Model_Path.endswith('.txt'):
@@ -1259,7 +1269,7 @@ def Predict_prob(BN, parameters, X, y, cat_names, Rel_Feat_Names, Save_2_folder,
         for train_index, test_index in skf.split(X, y.values.flatten()):
             Test_ind_list.append(test_index)
             Train_ind_list.append(train_index)
-            print("in predict_prob ---time is %s ---" % datetime.datetime.now())
+            print(("in predict_prob ---time is %s ---" % datetime.datetime.now()))
 
             params_df = pd.DataFrame.from_dict(parameters, orient="index")
             cat_ind = [x for x, name in enumerate(Rel_Feat_Names) if name in cat_names]
@@ -1312,18 +1322,18 @@ def Predict_prob(BN, parameters, X, y, cat_names, Rel_Feat_Names, Save_2_folder,
                 params_df_Total.to_csv(path)
 
             cv_ind += 1
-            print("Cross validation of cv_ind:", str(cv_ind), " of SN: ", str(SN),
-                  "took %s seconds ---" % (time.time() - start_time))
+            print(("Cross validation of cv_ind:", str(cv_ind), " of SN: ", str(SN),
+                  "took %s seconds ---" % (time.time() - start_time)))
 
         # params_df_Total.to_csv(path)
         with open(os.path.join(final_folder,"Test_ind_list_" + str(SN)), 'wb') as fp:
             pickle.dump(Test_ind_list, fp)
-        print
+        print()
         "finished saving Test_ind_list of:", str(cv_ind)
 
         with open(os.path.join(final_folder ,"Train_ind_list" + str(SN)), 'wb') as fp:
             pickle.dump(Train_ind_list, fp)
-        print
+        print()
         "finished saving Train_ind_list of:", str(cv_ind)
 
 
@@ -1331,7 +1341,7 @@ def AVG_Prob_AUC_APS_per_SN(job_name, Save_2_folder, final_folder, SN):
     path = os.path.join(Save_2_folder, str(SN) + '_cv_ind*_cv_result.csv')
     files = glob.glob(path)
     scores = []
-    print
+    print()
     "in AVG_Prob_AUC_APS_per_SN files:", files
     for name in files:  # 'file' is a builtin type, 'name' is a less-ambiguous variable name.
         scores.append(pd.read_csv(name).iloc[-1:, -3:])
@@ -1349,13 +1359,13 @@ def AVG_Prob_AUC_APS_per_SN(job_name, Save_2_folder, final_folder, SN):
     avg_score_df.index.name = "SN"
     avg_score_df.loc[str(SN), "score"] = avg_score
     avg_score_df.to_csv(fname)
-    print
+    print()
     "Scores Data frame at the end of AVG_Prob_AUC_APS_per_SN:", avg_score_df
 
 
 def Sort_Prob_AUC_APS(job_name, Save_2_folder, final_folder, Target_ID, calc_shap, use_proba, X, y, X_test,
                       y_test,metric, n_folds,pdf_name):
-    print ("pdf name in Sort_Prob_AUC_APS is:", pdf_name)
+    print(("pdf name in Sort_Prob_AUC_APS is:", pdf_name))
 
     fname = os.path.join(final_folder,job_name + "_Score_Table.csv")
     df = pd.read_csv(fname)
@@ -1370,10 +1380,10 @@ def Sort_Prob_AUC_APS(job_name, Save_2_folder, final_folder, Target_ID, calc_sha
 
     else:
         path = os.path.join(Save_2_folder,"SN*_parameters.csv")
-        print("in Sort_Prob_AUC_APS, path:", path)
-        print("Sort_AUC_APS concatanation path:", path)
+        print(("in Sort_Prob_AUC_APS, path:", path))
+        print(("Sort_AUC_APS concatanation path:", path))
         allFiles = glob.glob(path)
-        print("allFiles:", allFiles)
+        print(("allFiles:", allFiles))
         list_ = []
         for file_ in allFiles:
             print(file_)
@@ -1395,7 +1405,7 @@ def Sort_Prob_AUC_APS(job_name, Save_2_folder, final_folder, Target_ID, calc_sha
 
 def Sort_Prob(result, job_name, final_folder, Save_2_folder, frame, Target_ID, calc_shap, X, y,
               X_test, y_test, n_folds, pdf_name):
-    print
+    print()
     "pdf name in Sort_Prob is:", pdf_name
 
     metric = frame.loc["metric"].iloc[0]
@@ -1408,6 +1418,16 @@ def Sort_Prob(result, job_name, final_folder, Save_2_folder, frame, Target_ID, c
     Calc_Final_Proba(metric, Save_2_folder, final_folder, job_name, Target_ID, calc_shap,
                      X, y, X_test, y_test, n_folds, pdf_name)
 
+def convert_dict(params_dict):
+    convert_dict = {'is_unbalance': bool, 'objective': str,'boosting_type': str,
+                    'metric': str,'num_boost_round': int,'verbose': int,'learning_rate': float,
+                    'min_child_samples': int,'subsample': float,'colsample_bytree': float,
+                    'boost_from_average': bool,'num_threads': int,'lambda_l1': float,
+                    'lambda_l2': float}
+    new_params_dict = {}
+    for key, val in convert_dict.items():
+        new_params_dict[key] = val(params_dict[key])
+    return new_params_dict
 
 def Calc_Final_Proba(metric, Save_2_folder, final_folder, job_name, Target_ID, calc_shap, X, y, X_test, y_test, n_folds,
                      pdf_name
@@ -1415,9 +1435,7 @@ def Calc_Final_Proba(metric, Save_2_folder, final_folder, job_name, Target_ID, c
     run_name = str(pd.read_csv(os.path.join(final_folder,job_name + "_result_sorted.csv"),
                                index_col=0).index.values[0])
 
-    print
-    "pdf name in Calc_Final_Proba is:", pdf_name
-
+    print("pdf name in Calc_Final_Proba is:", pdf_name)
     with open(os.path.join(final_folder,"Rel_Feat_Names"), 'rb') as fp:
         Rel_Feat_Names = pickle.load(fp)
     with open(os.path.join(final_folder,"cat_names"), 'rb') as fp:
@@ -1432,14 +1450,16 @@ def Calc_Final_Proba(metric, Save_2_folder, final_folder, job_name, Target_ID, c
     parameters.index_name = "parameter"
     parameters.columns = parameters.loc["SN", :]
     parameters.drop(index="SN", inplace=True)
-    if isinstance(parameters, (list,)):
+    if isinstance(parameters, list):
         params_dict = parameters[run_name].to_dict()
     else:
         params_dict = parameters.to_dict()[run_name]
 
+    params_dict=convert_dict(params_dict)
+
     try:
         Refit_Return_Model_Path = params_dict["init_model"]  # Getting the path for the model to be refitted
-        print("Reffiting based on: ", Refit_Return_Model_Path)
+        print(("Reffiting based on: ", Refit_Return_Model_Path))
 
     except:
         Refit_Return_Model_Path = None
@@ -1452,13 +1472,13 @@ def Calc_Final_Proba(metric, Save_2_folder, final_folder, job_name, Target_ID, c
     shap_values_df = pd.DataFrame()
     cv_ind = 0
     y = pd.DataFrame(data=y, index=X.index)
-    print
+    print()
     'Start training of final model of: ', job_name, " at:", datetime.datetime.now()
     if Refit_Return_Model_Path != None:
         if os.path.isdir(Refit_Return_Model_Path):
             lgbs = [f for f in os.listdir(Refit_Return_Model_Path) if f.endswith('_lgbm.txt')]
             sort_lgbs = [x for i in range(5) for x in lgbs if x[-10] == str(i)]
-            print
+            print()
             "Sorted_lgbs:", sort_lgbs
         elif os.path.isfile(Refit_Return_Model_Path):
             lgbs = [Refit_Return_Model_Path]
@@ -1477,11 +1497,12 @@ def Calc_Final_Proba(metric, Save_2_folder, final_folder, job_name, Target_ID, c
     # evals_result = np.load(Save_2_folder+run_name + '_evals_result.npy')
 
     evals_result = {}  # to record eval results for plotting
-    print
+    print()
     'Start training non-shap values of final model of: ', job_name, " at:", datetime.datetime.now(), \
     " Fold Number:", str(cv_ind + 1), "out of:", str(n_folds)
     # train
     start_time = time.time()
+
     if Refit_Return_Model_Path == None:
         gbm = lgb.train(params=params_dict, num_boost_round=num_trees, train_set=lgb_train, valid_sets=[lgb_train],
                         valid_names=["Train"], feature_name=Rel_Feat_Names, evals_result=evals_result,
@@ -1500,20 +1521,20 @@ def Calc_Final_Proba(metric, Save_2_folder, final_folder, job_name, Target_ID, c
     gbm.save_model(os.path.join(final_folder,"Results_" + job_name + "_" + run_name + "_lgbm.txt"))
     params_dict = params_bu
     if not Calc_only_shap:
-        print('Start predicting non-shap values of final model of: ', job_name, " at:", datetime.datetime.now())
+        print(('Start predicting non-shap values of final model of: ', job_name, " at:", datetime.datetime.now()))
         y_proba = gbm.predict(X_val, num_iteration=num_trees, raw_score=False)
         y_proba_tmp_df = pd.DataFrame(data=y_proba, index=y_val.index)
         y_proba_df = pd.concat([y_proba_df, y_proba_tmp_df], axis=0)
         gbm.save_model(os.path.join(final_folder,job_name + run_name + '_lgbm.txt'))
 
     if calc_shap:
-        print("Calculating SHAP Values for:", job_name, " at:", datetime.datetime.now())
+        print(("Calculating SHAP Values for:", job_name, " at:", datetime.datetime.now()))
         X_val_shap = X_val.sample(np.min([np.max([1000,int(0.2*X_val.shape[0])]),X_val.shape[0]]))
         shap_values = gbm.predict(X_val_shap.values, num_iteration=gbm.best_iteration, pred_contrib=True, num_threads=10)
         shap_values_df = pd.DataFrame(data=shap_values,index=X_val_shap.index,columns=list(X_val_shap.columns.values)+["BiaShap"])
     # Add here the X_Test and Y_Test results
 
-    print
+    print()
     "Final training of ", job_name, " took %s seconds ---" % (time.time() - start_time)
     if ~Calc_only_shap:
         with open(os.path.join(final_folder,job_name + "_evals_result"), 'wb') as fp:
@@ -1525,7 +1546,7 @@ def Calc_Final_Proba(metric, Save_2_folder, final_folder, job_name, Target_ID, c
     if calc_shap:
         shap_values_df.to_csv(os.path.join(final_folder,job_name + "_shap_values.csv"), index=True)
 
-    print('Finished predicting...', job_name, "at time:", datetime.datetime.now())
+    print(('Finished predicting...', job_name, "at time:", datetime.datetime.now()))
     if ~Calc_only_shap:
         create_pdf_prob(metric, Save_2_folder, final_folder, job_name, Target_ID, calc_shap, n_folds, y_test, X_test,
                         pdf_name)
@@ -1533,7 +1554,7 @@ def Calc_Final_Proba(metric, Save_2_folder, final_folder, job_name, Target_ID, c
 
 def create_pdf_prob(metric, Save_2_folder, final_folder, job_name, Target_ID, calc_shap, n_folds, y_test, X_test,
                     pdf_name):
-    print
+    print()
     "pdf name in create_pdf_prob is:", pdf_name,
     run_name = str(
         pd.read_csv(filepath_or_buffer=os.path.join(final_folder,job_name + "_result_sorted.csv"), index_col=0).iloc[0, 0])
@@ -1588,7 +1609,7 @@ def create_pdf_prob(metric, Save_2_folder, final_folder, job_name, Target_ID, ca
                                          index_col="eid")
             df = shap_values_df.values
         else:
-            print
+            print()
             "Calculating SHAP Values for:", job_name, " at:", datetime.datetime.now()
             Calc_Final_Proba(metric, Save_2_folder, final_folder, job_name, Target_ID, calc_shap, X_test,
                              y_test
@@ -1636,7 +1657,7 @@ def create_pdf_prob(metric, Save_2_folder, final_folder, job_name, Target_ID, ca
         # Sorted_Question.drop_duplicates(keep="first", inplace=True)
         Sorted_Question["Score"] = ranks
         Sorted_Question.to_csv(os.path.join(final_folder , job_name + "_Features_List_Shap_Sorted.csv"))
-        print
+        print()
         "Printing Dependence plot for:", job_name, " at:", datetime.datetime.now()
 
         for name in Ordered_X_idx[0:NUM_OF_DEP_PLOT]:
@@ -1658,9 +1679,18 @@ def create_pdf_prob(metric, Save_2_folder, final_folder, job_name, Target_ID, ca
             plt.close("all")
 
     pdf.close()
-    print
+    print()
     "finished Create_PDF for:", job_name, " at:", datetime.datetime.now()
-    print
+    print()
     "Finished:", job_name
-    print
+    print()
     "saved PDF at:", SHAP_PDF_PATH
+
+def to_pickle(pickle_file,pickle_file_path):
+    with open(pickle_file_path, 'wb') as fp:
+        pickle.dump(pickle_file, fp)
+
+def from_pickle(pickle_file_path):
+    with open(pickle_file_path, 'rb') as fp:
+        data = pickle.load(fp)
+    return data

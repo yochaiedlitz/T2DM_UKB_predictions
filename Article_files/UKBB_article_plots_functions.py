@@ -1,7 +1,6 @@
 from UKBB_article_plots_config import *
 from imports import *
 
-
 def update_dictionary(current_dict, new_codes_csv_file, save=True):
     """New_codes_csv should be with columns 'Codes' without -0.0 and 'Labels'  """
     labels_df = pd.read_csv(new_codes_csv_file, index_col="Code")
@@ -25,7 +24,7 @@ def upload_ukbb_dict(path="/home/edlitzy/UKBB_Tree_Runs/For_article/UKBIOBANK_La
     dropped_df.to_csv(dropped_df_path, index=True)
     print("dropped the following lines due to duplicated indexes:")
     print(dropped_df)
-    print("A dataframe with the dropped columns was saved to: ", dropped_df_path)
+    print(("A dataframe with the dropped columns was saved to: ", dropped_df_path))
     for key in UKBIOBANK_labels_df.index.values:
         UKBIOBANK_dict[key] = UKBIOBANK_labels_df.loc[key, "Label"]
     return UKBIOBANK_dict, UKBIOBANK_labels_df
@@ -59,9 +58,9 @@ def sort_scores(y_files, predictions_files, labels, test="AUC"):
     y_scores_df = y_scores_df.set_index("labels")
     for ind, label in enumerate(labels):
         with open(predictions_files[ind], 'rb') as fp:
-            y_pred_val = pickle.load(fp)
+            y_pred_val = pickle.load(fp,encoding='latin')
         with open(y_files[ind], 'rb') as fp:
-            y_test_val = pickle.load(fp)
+            y_test_val = pickle.load(fp,encoding='latin')
         y_scores_df.loc[label, "AUC"] = roc_auc_score(y_test_val, y_pred_val)
         y_scores_df.loc[label, "APS"] = average_precision_score(
             y_test_val, y_pred_val)
@@ -89,10 +88,10 @@ def calc_precision_recall_list(df, sort=True):
     n = len(labels)
     if (all(len(x) == n for x in [y_files, predictions_files])):
         for ind, label in enumerate(labels):
-            with open(df.predictions_files.values[ind], 'rb') as fp:
-                y_pred_val = pickle.load(fp)
+            with open(predictions_files[ind], 'rb') as fp:
+                y_pred_val = pickle.load(fp,encoding='latin')
             with open(df.y_files.values[ind], 'rb') as fp:
-                y_test_val = pickle.load(fp)
+                y_test_val = pickle.load(fp,encoding='latin')
             precision, recall, _ = precision_recall_curve(
                 y_test_val, y_pred_val)
             precision_list.append(precision)
@@ -119,9 +118,9 @@ def calc_roc_list(df, sort=True):
     if (all(len(x) == n for x in [y_files, predictions_files])):
         for ind, label in enumerate(labels):
             with open(df.predictions_files.values[ind], 'rb') as fp:
-                y_pred_val = pickle.load(fp)
+                y_pred_val = pickle.load(fp,encoding='latin')
             with open(df.y_files.values[ind], 'rb') as fp:
-                y_test_val = pickle.load(fp)
+                y_test_val = pickle.load(fp,encoding='latin')
             fpr, tpr, _ = roc_curve(y_test_val, y_pred_val)
             fpr_list.append(fpr)
             tpr_list.append(tpr)
@@ -135,7 +134,7 @@ def calc_prevalence(df):
         file_name = df.y_files
     #     print (df)
     with open(file_name, 'rb') as fp:
-        y_test_val = pickle.load(fp)
+        y_test_val = pickle.load(fp,encoding='latin')
     prevalence = np.sum(y_test_val) / len(y_test_val)
     return prevalence
 
@@ -154,7 +153,7 @@ class create_folder_table:
         self.directories_path = directories_path
         self.name = self.get_folder_name()
         folder_directories = [x for x in os.listdir(self.directories_path) if
-                              (x != "shap_folder" and x != "LR_comparison" and
+                              (x != "shap_folder" and x != "LR_comparison" and x != "Calibration" and
                                os.path.isdir(os.path.join(self.directories_path, x)))]
         File_names = [x.replace('_Diabetes', '') for x in folder_directories]
 
@@ -166,7 +165,12 @@ class create_folder_table:
                                                               save_prefix=save_prefix).get()
         elif conversion_files_df.index.name != 'File name':
             conversion_files_df = conversion_files_df.reset_index().set_index('File name', drop=True)
+        not_found_file_names=[x for x in File_names if x not in conversion_files_df.index]
+        if len(not_found_file_names)>0:
+            print("Did not find the following file names in the conversion_files_df:",
+                  not_found_file_names," - which is the CI_Summary_table_object.get():",conversion_files_df)
 
+        File_names=[x for x in File_names if x in conversion_files_df.index]
         conversion_files_df = conversion_files_df.loc[File_names, :]
         #         print("above 'conversion_files_df.set_index('Label',drop=False,inplace=True)', conversion_files_df.head(): ",conversion_files_df.head())
 
@@ -175,9 +179,9 @@ class create_folder_table:
             lambda row: row['File name'] if row['Label'] == None else row['Label'], axis=1)
         conversion_files_df = conversion_files_df.set_index('Label', drop=True)
 
-        Articles_table_df = conversion_files_df.loc[:, [u'APS_lower',
-                                                        u'APS_mean', u'APS_upper', u'AUROC_lower', u'AUROC_mean',
-                                                        u'AUROC_upper']]
+        Articles_table_df = conversion_files_df.loc[:, ['APS_lower',
+                                                        'APS_mean', 'APS_upper', 'AUROC_lower', 'AUROC_mean',
+                                                        'AUROC_upper']]
         Articles_table_df["APS"] = Articles_table_df.apply(lambda row: self.return_aps_plus_ci(row), axis=1)
         Articles_table_df["AUROC"] = Articles_table_df.apply(lambda row: self.return_auroc_plus_ci(row), axis=1)
         if Labels == None:
@@ -193,6 +197,7 @@ class create_folder_table:
         if type(update_labels_dict) != list:
             self.update_labels(update_labels_dict)
         else:
+            self.Folder_table_df=self.Folder_table_df.sort_values(by="AUROC_mean")
             self.Folder_table_df.to_csv(self.save_path)
 
     def get_folder_name(self):
@@ -218,7 +223,7 @@ class create_folder_table:
     def update_labels(self, replace_dict, save=True):
         tmp_df = self.Folder_table_df.reset_index()
         for ind, tmp_label in enumerate(tmp_df.loc[:, "Label"].values):
-            for key in replace_dict.keys():
+            for key in list(replace_dict.keys()):
                 if key in tmp_label:
                     tmp_label = tmp_label.replace(key, replace_dict[key])
             tmp_df.loc[ind, "Label"] = tmp_label
@@ -247,7 +252,7 @@ class create_folder_table:
             path = self.save_path
         self.Folder_table_df.to_csv(path, index=True)
         self.save_path = path
-        print("Saved to: ", self.save_path)
+        print(("Saved to: ", self.save_path))
 
     def quant_update_folder_table(self, folder_path,
                                   ci_path="/home/edlitzy/UKBB_Tree_Runs/For_article/Imputed_screened/Imputed_screened_CI_Summary.csv"):
@@ -273,12 +278,13 @@ def correct_csv_endings(dir_list, wrong_ending=".0.csv", correct_ending=".csv"):
 
 class CI_Summary_table_object:
     def __init__(self, root_path, save_to_file=False, update=True,
-                 save_prefix="Article"):
-        print("Root path:", root_path)
-        try:
-            save_path = os.path.join(root_path, save_prefix + "_CI_Summary.csv")
-        except:
-            save_path = root_path
+                 save_prefix="Article",save_path=None):
+        print(("Root path:", root_path))
+        if not save_path:
+            try:
+                save_path = os.path.join(root_path, save_prefix + "_CI_Summary.csv")
+            except:
+                save_path = root_path
         self.save_path = save_path
         self.color_dict = {}
         self.UKBIOBANK_dict = {}
@@ -339,7 +345,7 @@ class CI_Summary_table_object:
         file_name = list(new_CI_Summary_table.index.values)
         duplicates = set([x for x in file_name if file_name.count(x) > 1])
         if len(duplicates) > 0:
-            print ("!!!! PAY ATTENTION dropped the following duplicates !!!!!!", duplicates)
+            print(("!!!! PAY ATTENTION dropped the following duplicates !!!!!!", duplicates))
             #             print("new_CI_Summary_table:",new_CI_Summary_table)
             new_CI_Summary_table = new_CI_Summary_table.reset_index().drop_duplicates(
                 subset=["File name"], keep='first').set_index("File name", drop=True)
@@ -354,14 +360,22 @@ class CI_Summary_table_object:
         self.CI_Summary_table = self.CI_Summary_table.loc[:, self.columns]
         self.index = self.CI_Summary_table.index.values.tolist()
         self.check_nan_labels()
+        self.load_color_dict()
+        self.update_labels()
         if save_to_file:
             self.Old_CI_Summary_table.to_csv(os.path.join(root_path, "Articles_CI_Summary_previous_version.csv")
                                              , index=True)
             #             print ("saving:", self.conversion_files_obj.head(),save_path)
             self.CI_Summary_table.to_csv(save_path, index=True)
-        self.load_color_dict()
+
         self.upload_ukbb_dict()
         self.calc_ci_path_dict()
+
+    def update_labels(self):
+        mut_indexes=[x for x in self.CI_Summary_table.index if x in self.colors_csv.index]
+        non_mut_indexes=[x for x in self.CI_Summary_table.index if x not in mut_indexes]
+        self.CI_Summary_table.loc[mut_indexes,"Label"]=self.colors_csv.loc[mut_indexes,"Label"]
+        print(("The following file names labels might be required an update on "+self.colors_csv_path))
 
     def update(self, ind_name, col_name, val, save=True):
         self.CI_Summary_table.loc[ind_name, col_name] = val
@@ -377,7 +391,7 @@ class CI_Summary_table_object:
     def check_nan_labels(self):
         nan_labels_list = self.CI_Summary_table.loc[:, "Label"].isna()
         self.nan_labels = self.CI_Summary_table.loc[nan_labels_list, :]
-        print ("The folowing files has no labels:", self.nan_labels)
+        print(("The folowing files has no labels:", self.nan_labels))
         replace_nan_labels = self.CI_Summary_table.loc[nan_labels_list, :].index
         replace_nan_labels = [x.replace("_", " ") for x in replace_nan_labels]
         replace_nan_labels = [x.replace("LR ", "") + " LR" for x in replace_nan_labels if "LR " in x]
@@ -455,22 +469,22 @@ def calc_roc_aps_lists(directories_path,
         Save_to_Table_path = directories_path
     if type(conversion_files_df) == list:
         conversion_files_object = CI_Summary_table_object(root_path=CI_Results_path)
-        print("\nconversion_files_object=", conversion_files_object)
+        print(("\nconversion_files_object=", conversion_files_object))
         conversion_files_df = conversion_files_object.get()
-        print("conversion_files_df:\n", conversion_files_df)
+        print(("conversion_files_df:\n", conversion_files_df))
     if dirs_names == None:
         all_directories = [x for x in os.listdir(directories_path) if
                            x != "shap_folder" and x != "LR_comparison" and
                            os.path.isdir(os.path.join(directories_path, x)) and ("Quantiles" not in x)]
     else:
         all_directories = dirs_names
-    print("\ndirectories_path=", directories_path,
+    print(("\ndirectories_path=", directories_path,
           "\nSave_to_Table_path=", Save_to_Table_path,
-          "all_directories=", all_directories)
+          "all_directories=", all_directories))
     predictions_files = []
     y_files = []
     for dirname in all_directories:
-        print ("dirname:", dirname)
+        print(("dirname:", dirname))
         if (dirname not in directories_to_skip) and ("Quantiles_" not in dirname):
             if (dirname.startswith("LR_") or dirname.endswith("_LR") or dirname.startswith("SA_")
                     or dirname.endswith("_SA")):
@@ -504,7 +518,7 @@ def calc_roc_aps_lists(directories_path,
                                                       pred_list_name))
                 y_files.append(os.path.join(directories_path, dirname, results_directory_name, test_list_name))
         else:
-            print ("skipped dirname:", dirname)
+            print(("skipped dirname:", dirname))
     sorted_label_name = []
     sorted_predictions_files = []
     sorted_y_files = []
@@ -518,7 +532,7 @@ def calc_roc_aps_lists(directories_path,
             sorted_predictions_files.append(predictions_files[ind])
             sorted_y_files.append(y_files[ind])
         else:
-            print (x, " was not found in the conversion file")
+            print((x, " was not found in the conversion file"))
     labels = sorted_label_name
     y_files = sorted_y_files
     predictions_files = sorted_predictions_files
@@ -536,8 +550,12 @@ def calc_roc_aps_lists(directories_path,
         #         print("****ind,label:",ind," ",label)
         #         print "****df.loc[label,:]: ",df.loc[label,:]
         #         print "****conversion_files_dCI_Results_pathf.loc[label,:]: ", conversion_files_df.loc[label,:]
-        df.loc[label, "AUC"] = conversion_files_df.loc[label, "AUROC_mean"]
-        df.loc[label, "APS"] = conversion_files_df.loc[label, "APS_mean"]
+        try:
+            df.loc[label, "AUC"] = conversion_files_df.loc[label, "AUROC_mean"]
+            df.loc[label, "APS"] = conversion_files_df.loc[label, "APS_mean"]
+            print(label+" succeed")
+        except:
+            print(label+" failed")
     df = df.sort_values(by="AUC")
     precision_list, recall_list = calc_precision_recall_list(df, sort=False)
     fpr_list, tpr_list = calc_roc_list(df, sort=False)
@@ -549,6 +567,7 @@ def calc_roc_aps_lists(directories_path,
                                        Save_to_Table_path=Save_to_Table_path).get()
     df["APS_95CI"] = CI_table.loc[:, "APS"]
     df["AUC_95CI"] = CI_table.loc[:, "AUROC"]
+
     return df, precision_list, recall_list, fpr_list, tpr_list
 
 
@@ -559,7 +578,7 @@ def Load_CI_dictionaries(Folder, metric="AUROC"):
     for CI_dict in F1_files:
         path = os.path.join(Folder, CI_dict)
         with open(path, 'rb') as fp:
-            data_dict = pickle.load(fp)
+            data_dict = pickle.load(fp,encoding='latin')
         metric_list.append(data_dict[metric])
         metric_array = np.array(metric_list)
     #     print(Folder,"statistics: mean=",metric_array.mean(),"stdv=",metric_array.std())
@@ -570,8 +589,8 @@ def Calc_P_value(Folder_1, Folder_2, metric="AUROC"):
     metric_array1, metric_mean1, metric_std1 = Load_CI_dictionaries(Folder_1, metric)
     metric_array2, metric_mean2, metric_std2 = Load_CI_dictionaries(Folder_2, metric)
     ttest, pval = mannwhitneyu(metric_array1, metric_array2)
-    print("p-value:", pval)
-    print("ttest:", ttest)
+    print(("p-value:", pval))
+    print(("ttest:", ttest))
     if pval < 0.05:
         print("we reject null hypothesis")
     else:
@@ -650,9 +669,9 @@ def plot_ROC_curves(fpr_list, tpr_list, df, ax=None, legend_length=3, font_size=
         ax.set_xticks(np.arange(0, 1.1, 0.2))
         ax.set_xticklabels(["0", "0.2", "0.4", "0.6", "0.8", "1"], fontsize=ticks_font_weight)
     else:
-        print("all input lists should be same length, y_test_val_list:",
+        print(("all input lists should be same length, y_test_val_list:",
               len(y_files), ", y_pred_val_list:", len(predictions_files),
-              ", labels:", len(labels))
+              ", labels:", len(labels)))
     plt.tight_layout()
     if txt != None:
         ax.text(x_txt, y_txt, txt, fontsize=txt_font_size,
@@ -699,7 +718,7 @@ def plot_roc_ci(df, ci_dict_path, color_dict,
         #         print label
         data_dict[label] = {}
         color = color_dict[label]
-        print(label, ":", color)
+        print((label, ":", color))
         all_files = os.listdir(ci_dict_path[label])
         rel_ci_files = [x for x in all_files if x.startswith("CI_Dict")]
         if len(rel_ci_files) > 0:
@@ -707,7 +726,7 @@ def plot_roc_ci(df, ci_dict_path, color_dict,
                 rel_ci_files = rel_ci_files[:num_of_files]
             for ci_file in rel_ci_files:
                 with open(os.path.join(ci_dict_path[label], ci_file), 'rb') as fp:
-                    data_dict[label][ci_file] = pickle.load(fp)
+                    data_dict[label][ci_file] = pickle.load(fp,encoding='latin')
         else:
             rel_ci_files = [x for x in all_files if x.startswith("y_pred_results")]
             for ci_file in rel_ci_files:
@@ -721,7 +740,7 @@ def plot_roc_ci(df, ci_dict_path, color_dict,
                     y_test = csv_file.loc[:, "y_test_val"].values
                 data["fpr"], data["tpr"], _ = roc_curve(y_test, y_pred)
                 data_dict[label][ci_file] = data
-        for ci_file in data_dict[label].keys():
+        for ci_file in list(data_dict[label].keys()):
             fpr = data_dict[label][ci_file]["fpr"]
             tpr = data_dict[label][ci_file]["tpr"]
 
@@ -874,9 +893,9 @@ def plot_APS_curves(precision_list, recall_list, df, ax=None, legend_length=20,
         frame.set_edgecolor("white")
 
     else:
-        print("all input lists should be same length, y_test_val_list:",
+        print(("all input lists should be same length, y_test_val_list:",
               len(y_files), ", y_pred_val_list:", len(predictions_files),
-              ", labels:", len(labels))
+              ", labels:", len(labels)))
         print("please make sure that how==simple or how==relative")
 
     if xy_lines != None:
@@ -958,7 +977,7 @@ def plot_aps_ci(df,
                     y_test = csv_file.loc[:, "y_test_val"].values
                 data["precision"], data["recall"], _ = precision_recall_curve(y_test, y_pred)
                 data_dict[label][ci_file] = data
-        for ci_file in data_dict[label].keys():
+        for ci_file in list(data_dict[label].keys()):
             recall = data_dict[label][ci_file]["recall"]
             precision = data_dict[label][ci_file]["precision"]
 
@@ -967,7 +986,7 @@ def plot_aps_ci(df,
             APS = df.loc[label, "APS_95CI"]
             legend_list.append(mpatches.Patch(color=color_dict[label], label=APS))
         else:
-            if label in legend_dict.keys():
+            if label in list(legend_dict.keys()):
                 new_label = wrap_labels(legend_dict[label], num_of_chars)
             else:
                 new_label = wrap_labels(label, num_of_chars)
@@ -1144,9 +1163,9 @@ def plot_quantiles_curve(
         fig, ax = plt.subplots(1, 1, figsize=figsize)
 
     with open(singles_df.loc[test_label, "predictions_files"], 'rb') as fp:
-        y_pred_val = pickle.load(fp)
+        y_pred_val = pickle.load(fp,encoding='latin')
     with open(singles_df.loc[test_label, "y_files"], 'rb') as fp:
-        y_test_val = pickle.load(fp)
+        y_test_val = pickle.load(fp,encoding='latin')
 
     vals_df = pd.DataFrame(data={"Y_test": y_test_val, "Y_Pred": y_pred_val})
     res = 1. / bins
@@ -1237,28 +1256,43 @@ def plot_quantiles_curve(
 
 
 def calc_folders_Rank_df(folder_path, bins=10, low_quantile=0.1, top_quantile=1, save=False,
-                         force_calc=False,num_of_files=None,minimal_diagnosed=1,recalc=False):
+                         num_of_files=None,minimal_diagnosed=1,recalc=False,qp=None):
     Rank_df_list = []
     dirs = [x for x in os.listdir(folder_path) if (("LR" in x or "SA" in x or "Diabetes" in x)
                                                    and os.path.isdir(os.path.join(folder_path, x)))]
     name = os.path.basename(folder_path)
     res = 1. / bins
     quants_bins = [int(x * 100) / 100. for x in np.arange(low_quantile, top_quantile + res / 2, res)]
-    for dir_name in dirs:
-        print("working on:", dir_name)
-        tmp_file_name=os.path.join(folder_path, dir_name,dir_name+"quantiles_rank_df.csv")
-        if os.path.isfile(tmp_file_name) and not recalc:
+    if qp is None:
+        qp = config.qp
+        sethandlers()
+        os.chdir('/net/mraid08/export/jafar/Microbiome/Analyses/Edlitzy/tempq_files/')
+    with qp(jobname="folds_calc", q=['himem7.q'], _mem_def='4G', _trds_def=2,
+            _tryrerun=False, max_r=650) as q:
+        q.startpermanentrun()
+        tkns = []
+        for dir_name in dirs:
+            print(("working on:", dir_name))
+            tmp_file_name=os.path.join(folder_path, dir_name,dir_name+"quantiles_rank_df.csv")
+            if not os.path.isfile(tmp_file_name) or recalc:
+                if "Diabetes" in dir_name:
+                    params_dict={"folder_name":os.path.join(folder_path, dir_name),
+                                     "quants_bins": quants_bins,"bins":bins,"num_of_files":num_of_files,
+                                     "minimal_diagnosed":minimal_diagnosed,"return_result":"False",
+                                     "save_path":tmp_file_name}
+                    tkns.append(q.method(calc_gbdt_Rank_df,(), params_dict))
+                elif "LR" in dir_name or "SA" in dir_name:
+                    params_dict ={"folder_name":os.path.join(folder_path, dir_name),
+                                  "quants_bins":quants_bins, "bins":bins, "force_calc":recalc ,
+                                  "num_of_files":num_of_files,"minimal_diagnosed":minimal_diagnosed,
+                                  "return_result" : False,"save_path":tmp_file_name}
+                    tkns.append(q.method(calc_lr_Rank_df,(), params_dict))
+        q.wait(tkns, assertnoerrors=False)
+
+        for dir_name in dirs:
+            tmp_file_name = os.path.join(folder_path, dir_name, dir_name + "quantiles_rank_df.csv")
+            print(("loading on:", tmp_file_name))
             tmp_rank_df=pd.read_csv(tmp_file_name,index_col=0)
-        else:
-            if "Diabetes" in dir_name:
-                tmp_rank_df = calc_gbdt_Rank_df(os.path.join(folder_path, dir_name), quants_bins,
-                                                bins=bins,num_of_files=num_of_files,minimal_diagnosed=minimal_diagnosed)
-            elif "LR" in dir_name or "SA" in dir_name:
-                tmp_rank_df = calc_lr_Rank_df(os.path.join(folder_path, dir_name), quants_bins,
-                                              bins=bins, force_calc=force_calc,num_of_files=num_of_files,
-                                              minimal_diagnosed=minimal_diagnosed)
-            tmp_rank_df.to_csv(os.path.join(folder_path, dir_name, dir_name + "quantiles_rank_df.csv"))
-        if type(tmp_rank_df) != list:
             Rank_df_list.append(tmp_rank_df)
     rank_df_tot = pd.concat(Rank_df_list)
     if save:
@@ -1266,7 +1300,8 @@ def calc_folders_Rank_df(folder_path, bins=10, low_quantile=0.1, top_quantile=1,
     return rank_df_tot
 
 
-def calc_gbdt_Rank_df(folder_name, quants_bins, bins,num_of_files=None,minimal_diagnosed=1):
+def calc_gbdt_Rank_df(folder_name, quants_bins, bins,num_of_files=None,minimal_diagnosed=1,return_result=True,
+                      save_path=None):
     name = os.path.basename(folder_name)
     csv_file_name = os.path.join(folder_name, name + "_" + str(bins) + "_quantiles_rank_df.csv")
     try:
@@ -1283,7 +1318,7 @@ def calc_gbdt_Rank_df(folder_name, quants_bins, bins,num_of_files=None,minimal_d
             ci_dict_names=ci_dict_names[:num_of_files]
         for f in ci_dict_names:
             with open(os.path.join(ci_path, f), 'rb') as fp:
-                data_dict = pickle.load(fp)
+                data_dict = pickle.load(fp,encoding='latin')
             y_proba = data_dict["y_proba"]
             y_test = data_dict["y_val.values"].flatten()
             ci_tmp_df = pd.DataFrame({"y_pred": y_proba, "y_test": y_test})
@@ -1291,11 +1326,15 @@ def calc_gbdt_Rank_df(folder_name, quants_bins, bins,num_of_files=None,minimal_d
             Rank_gbdt_list.append(tmp_Rank_df)
         Rank_df = pd.concat(Rank_gbdt_list)
         Rank_df["dir_name"] = name
-        Rank_df.to_csv(csv_file_name, index=False)
-    return Rank_df
+        # Rank_df.to_csv(csv_file_name, index=False)
+        if save_path is not None:
+            Rank_df.to_csv(save_path, index=False)
+    if return_result:
+        return Rank_df
 
 
-def calc_lr_Rank_df(folder_name, quants_bins, bins, force_calc=False,num_of_files=None,minimal_diagnosed=1):
+def calc_lr_Rank_df(folder_name, quants_bins, bins, force_calc=False,num_of_files=None,minimal_diagnosed=1,
+                    return_result=True,save_path=None):
     name = os.path.basename(folder_name)
     csv_file_name = os.path.join(folder_name, name + "_" + str(bins) + "_quantiles_rank_df.csv")
     if os.path.isfile(csv_file_name) and not force_calc:
@@ -1313,13 +1352,23 @@ def calc_lr_Rank_df(folder_name, quants_bins, bins, force_calc=False,num_of_file
         for f in tqdm(ci_file_names):
             ci_tmp_df = pd.read_csv(os.path.join(ci_path, f), index_col=0)
             if "SA" in folder_name:
-                ci_tmp_df.columns = ["y_pred", "y_test"]
+                if "y_test" in ci_tmp_df.columns[0]:
+                    ci_tmp_df.columns = ["y_test", "y_pred"]
+                elif "y_pred" in ci_tmp_df.columns[0]:
+                    ci_tmp_df.columns = ["y_pred", "y_test"]
+                elif len(set(ci_tmp_df.iloc[:,0].values))>2:
+                    ci_tmp_df.columns = ["y_pred","y_test"]
+                else:
+                    ci_tmp_df.columns = ["y_test","y_pred"]
             tmp_Rank_df = calc_Rank_df(ci_tmp_df, quants_bins,minimal_diagnosed=minimal_diagnosed)
             Rank_lr_df_list.append(tmp_Rank_df)
         Rank_df = pd.concat(Rank_lr_df_list)
         Rank_df["dir_name"] = name
-        Rank_df.to_csv(csv_file_name, index=False)
-    return Rank_df
+        # Rank_df.to_csv(csv_file_name, index=False)
+        if save_path is not None:
+            Rank_df.to_csv(save_path, index=False)
+    if return_result:
+        return Rank_df
 
 def update_folds_tmp_rank_df(Rank_df,minimal_diagnosed=1):
     Rank_df.loc[:, "Ratio"] = Rank_df.loc[:, "Ratio"].fillna(0)
@@ -1405,42 +1454,44 @@ def calc_CI_percentile(folder_path, category="Fold", alpha=0.95, plot_hist=False
                        calc_precentile=True, save_hist=[], dpi=200, prefix="10"):
     quant_ci_res_list = []
     name = os.path.basename(folder_path)
-    Rank_df = pd.read_csv(os.path.join(folder_path, name + "_" + prefix + "_quantiles_rank_df.csv"),
-                          index_col="dir_name")
-    Rank_df = Rank_df.loc[Rank_df.loc[:, "quantile number"] == 10, :]
-    files_names = list(set(Rank_df.index.values.tolist()))
-    print(files_names)
-    if plot_hist:
-        fig, ax = plt.subplots(1, 1, figsize=(72, 64))
-        Rank_df.reset_index().hist(column="Fold", bins=100, by="dir_name", ax=ax)
-        plt.show()
-        if type(save_hist) != list:
-            plt.savefig(os.path.join(folder_path, name + prefix + "_quantiles_hist.jpg"), dpi=dpi)
-            plt.savefig(os.path.join(folder_path, name + prefix + "_quantiles_hist.pdf"), dpi=dpi)
-            print("saved to:", os.path.join(folder_path, name + prefix + "_quantiles_hist.pdf"))
-    if calc_precentile:
-        for file_name in files_names:
-            metric_list = Rank_df.loc[file_name, category].values.tolist()
-            metric_list = [x for x in metric_list if not pd.isnull(x)]
-            p = ((1.0 - alpha) / 2.0) * 100
-            lower = np.percentile(metric_list, p)
-            p = (alpha + ((1.0 - alpha) / 2.0)) * 100
-            upper = np.percentile(metric_list, p)
-            mean = np.mean(metric_list)
-            quant_ci = "{:.2f}".format(mean) + " (" + "{:.2f}".format(lower) + "-" + "{:.2f}".format(upper) + ")"
-            tmp_df = pd.DataFrame({"File name": file_name,
-                                   "quant_lower": [lower],
-                                   'quant_mean': [mean],
-                                   "quant_upper": upper,
-                                   "quant_CI": quant_ci})
-            tmp_df = tmp_df.set_index("File name", drop=True)
-            quant_ci_res_list.append(tmp_df)
+    rel_folders=[x for x in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path,x))]
+    for folder_name in rel_folders:
+        Rank_df = pd.read_csv(os.path.join(folder_path,folder_name, folder_name + "_" + prefix + "_quantiles_rank_df.csv"),
+                              index_col="dir_name")
+        Rank_df = Rank_df.loc[Rank_df.loc[:, "quantile number"] == 10, :]
+        files_names = list(set(Rank_df.index.values.tolist()))
+        print(files_names)
+        if plot_hist:
+            fig, ax = plt.subplots(1, 1, figsize=(72, 64))
+            Rank_df.reset_index().hist(column="Fold", bins=100, by="dir_name", ax=ax)
+            plt.show()
+            if type(save_hist) != list:
+                plt.savefig(os.path.join(folder_path, name + prefix + "_quantiles_hist.jpg"), dpi=dpi)
+                plt.savefig(os.path.join(folder_path, name + prefix + "_quantiles_hist.pdf"), dpi=dpi)
+                print(("saved to:", os.path.join(folder_path, name + prefix + "_quantiles_hist.pdf")))
+        if calc_precentile:
+            for file_name in files_names:
+                metric_list = Rank_df.loc[file_name, category].values.tolist()
+                metric_list = [x for x in metric_list if not pd.isnull(x)]
+                p = ((1.0 - alpha) / 2.0) * 100
+                lower = np.percentile(metric_list, p)
+                p = (alpha + ((1.0 - alpha) / 2.0)) * 100
+                upper = np.percentile(metric_list, p)
+                mean = np.mean(metric_list)
+                quant_ci = "{:.2f}".format(mean) + " (" + "{:.2f}".format(lower) + "-" + "{:.2f}".format(upper) + ")"
+                tmp_df = pd.DataFrame({"File name": file_name,
+                                       "quant_lower": [lower],
+                                       'quant_mean': [mean],
+                                       "quant_upper": upper,
+                                       "quant_CI": quant_ci})
+                tmp_df = tmp_df.set_index("File name", drop=True)
+                quant_ci_res_list.append(tmp_df)
 
-        CI_percentile_neto_df = pd.concat(quant_ci_res_list)
-        CI_percentile_neto_df.to_csv(os.path.join(folder_path, name + "_" + prefix + "_quantiles_ci_neto.csv"),
-                                     index=True)
+    CI_percentile_neto_df = pd.concat(quant_ci_res_list)
+    CI_percentile_neto_df.to_csv(os.path.join(folder_path, name + "_" + prefix + "_quantiles_ci_neto.csv"),
+                                 index=True)
 
-        return CI_percentile_neto_df
+    return CI_percentile_neto_df
 
 
 def quant_update_CI_table(
@@ -1486,8 +1537,8 @@ def plot_quantiles_sns(folders_list, ci=95, n_boots=1000, hue_order=None, font_s
                        x_name="Quantile", y_name="Quantiles fold", fig_size=(30, 24),
                        fig_path=None, dpi=200, fontsize=72, y_scale=None,
                        leg_bbox_to_anchor=(0.5, 0.9), leg_loc="center_right", framealpha=0.5, frameon=True,
-                       quantiles_ci_table=None):
-    sns.set_style('whitegrid', {'legend.frameon': frameon})
+                       quantiles_ci_table=None,style="white"):
+    sns.set_style(style, {'legend.frameon': frameon})
     df = sns_load_files(folders_list)
     plot_cat(df, x_column="quantile number", y_column="Fold",
              category_column="dir_name", fig_size=fig_size, ci=ci, n_boots=n_boots,
@@ -1495,7 +1546,7 @@ def plot_quantiles_sns(folders_list, ci=95, n_boots=1000, hue_order=None, font_s
              leg_title=leg_title, leg_labels=leg_labels, x_labels=x_labels,
              x_name=x_name, y_name=y_name, fig_path=fig_path, dpi=dpi, fontsize=fontsize,
              y_scale=y_scale, leg_bbox_to_anchor=leg_bbox_to_anchor, leg_loc=leg_loc, framealpha=framealpha,
-             frameon=frameon,quantiles_ci_table=quantiles_ci_table)
+             frameon=frameon,quantiles_ci_table=quantiles_ci_table,style=style)
 
 
 def sns_load_files(folders_list,suff = "_10_quantiles_rank_df.csv"):
@@ -1508,7 +1559,7 @@ def sns_load_files(folders_list,suff = "_10_quantiles_rank_df.csv"):
         df_list.append(pd.read_csv(csv_file_name, index_col=None))
 
     df = pd.concat(df_list)
-    print(df.head())
+    print((df.head()))
     return df
 
 
@@ -1516,11 +1567,12 @@ def plot_cat(df, font_scale, x_column, y_column, category_column, ax=None,
              fig_size=None, hue_order=None, n_boots=1000, ci=95, kind="bar", xlabels=None,
              leg_title=None, leg_labels=None, x_labels=None, x_name="Quantile",
              y_name="Quantiles fold", dpi=200, fig_path=None, fontsize=72, y_scale=None, framealpha=0.5,
-             leg_bbox_to_anchor=(0.5, 0.9), leg_loc="center_right", frameon=True,quantiles_ci_table=None):
+             leg_bbox_to_anchor=(0.5, 0.9), leg_loc="center_right", frameon=True,quantiles_ci_table=None,
+             style="white"):
     #         color_csv=pd.read_csv("/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/colors.csv",
     #                               index_col="File name")
-    if ax == None:
-        fig, ax = plt.subplots(1, 1, figsize=fig_size)
+    # if ax == None:
+    #     fig, ax = plt.subplots(1, 1, figsize=fig_size)
     colors_df = pd.read_csv("/home/edlitzy/UKBB_Tree_Runs/For_article/colors.csv", index_col="File name")
     if hue_order == None:
         file_names_list = list(set(df.dir_name.values))
@@ -1532,24 +1584,25 @@ def plot_cat(df, font_scale, x_column, y_column, category_column, ax=None,
     for file_name in file_names_list:
         try:
             colors_list.append(colors_df.loc[file_name, "color"])
-            print(file_name, ":", colors_df.loc[file_name, "color"])
+            print((file_name, ":", colors_df.loc[file_name, "color"]))
         except:
             raise Exception(
                 file_name,
                 " was not found in the colors_df: \
                 /home/edlitzy/UKBB_Tree_Runs/For_article/colors.csv")
 
-    sns.set(font_scale=font_scale)
-    sns.catplot(x=x_column, y=y_column, data=df, hue=category_column, capsize=0.2, ax=ax,
+    sns.set(font_scale=font_scale,style=style)
+    g=sns.catplot(x=x_column, y=y_column, data=df, hue=category_column, capsize=0.2,
                 hue_order=hue_order, n_boot=n_boots, ci=ci,
                 kind=kind, palette=sns.color_palette(colors_list), height=fig_size[0],
-                aspect=float(fig_size[1]) / fig_size[0])
+                aspect=float(fig_size[1]) / fig_size[0],legend=False)#facet_kws={'legend_out': True}
+    ax=g.fig.get_axes()[0]
     if y_scale == "log":
-        ax.set_yscale("log")
+        ax.set_yscale('log')
     if x_labels != None:
         ax.set_xticklabels(x_labels)
-    ax.legend(facecolor="white", frameon=frameon, loc=leg_loc, framealpha=framealpha,
-              bbox_to_anchor=leg_bbox_to_anchor)
+    g.ax.legend(facecolor="white", frameon=frameon, loc=leg_loc, framealpha=framealpha,
+                bbox_to_anchor=leg_bbox_to_anchor)
     ax.set_xlabel(x_name)
     ax.set_ylabel(y_name)
     ax.set_ylim([df.loc[:, y_column].min(), df.loc[:, y_column].max()])
@@ -1557,7 +1610,10 @@ def plot_cat(df, font_scale, x_column, y_column, category_column, ax=None,
     ax.spines['top'].set_visible(False)
     for label in [ax.xaxis.label, ax.yaxis.label] + ax.get_xticklabels() + ax.get_yticklabels():
         label.set_fontsize(fontsize)
-    leg = ax.get_legend()
+    leg=g.ax.get_legend()
+    # ax.get_legend()(facecolor="white", frameon=frameon, loc=leg_loc, framealpha=framealpha,
+    #     bbox_to_anchor=leg_bbox_to_anchor)
+    # leg()
     leg.set_title(leg_title)
     if quantiles_ci_table is not None:
         for t, l in zip(leg.texts, orig_file_names_list):
@@ -1572,7 +1628,7 @@ def plot_cat(df, font_scale, x_column, y_column, category_column, ax=None,
     plt.tight_layout()
     if fig_path != None:
         plt.savefig(fig_path, dpi=dpi)
-        print("Saved figure to:", fig_path)
+        print(("Saved figure to:", fig_path))
     plt.show()
 
 
@@ -1605,10 +1661,10 @@ def build_features_importance_df(folder_path, file_names_list, labels_dict, tabl
         models_paths = [os.path.join(CI_path, x) for x in models_files]
         use_cols_path = os.path.join(path, "use_cols.txt")
         with open(use_cols_path, "rb") as fp:  # Pickling
-            use_cols = pickle.load(fp)
+            use_cols = pickle.load(fp,encoding='latin')
         use_cols = [x for x in use_cols if x != "eid"]
         for model_path in models_paths:
-            clf = pickle.load(open(model_path, 'rb'))
+            clf = pickle.load(open(model_path, 'rb'),encoding='latin')
             imp_coef = pd.DataFrame({"Covariates names": use_cols,
                                      "Covariate coefficient": clf.coef_.flatten(),
                                      "category": cat})
@@ -1661,7 +1717,8 @@ class LR_Feature_importance:
                  remove_legend=False,
                  ci_summary_table_name="tmp_feature_imp.csv",
                  build_new=False,
-                 used_labels_df_path=None):
+                 used_labels_df_path=None,
+                 style="white"):
         """
         plot_type would be:
             bar plot for type(Folder_path)==str or
@@ -1676,7 +1733,7 @@ class LR_Feature_importance:
         hue_colors_dict should be adictionary for the cat plot of the form:
             hue_colors_dict=dict(zip([folder_name1,folder_name2],[color1,color2])
         """
-        sns.set_style('whitegrid', {'legend.frameon': True})
+        sns.set_style('white', {'legend.frameon': True})
         self.used_labels_df_path = used_labels_df_path
         self.labels_df = None
         self.Labels_file_path = labels_file_path
@@ -1686,11 +1743,13 @@ class LR_Feature_importance:
         self.folder_path = folder_path
         self.font_scale = font_scale
         self.figsize = figsize
-        if ax == None:
-            self.fig, self.ax = plt.subplots(1, 1, figsize=figsize)
-        else:
-            self.fig = fig
-            self.ax = ax
+        self.ax=None
+        self.style="white"
+        # if ax == None:
+        #     self.fig, self.ax = plt.subplots(1, 1, figsize=figsize)
+        # else:
+        #     self.fig = fig
+        #     self.ax = ax
 
         if type(fig_path) != list:
             self.fig_path = [fig_path]
@@ -1720,16 +1779,17 @@ class LR_Feature_importance:
         self.show_values_on_bar = show_values_on_bar
         self.remove_legend = remove_legend
         self.features_ci_table = None
-        self.ci_summary_table_name = os.path.join(
-            "/home/edlitzy/UKBB_Tree_Runs/For_article/Imputed_screened/Tables/", ci_summary_table_name)
+        # self.ci_summary_table_path = os.path.join(self.table_save_path, ci_summary_table_name)
 
-        if not self.ci_summary_table_name.endswith(".csv"):
-            self.ci_summary_table_name = self.ci_summary_table_name + ".csv"
+        # if not self.ci_summary_table_path.endswith(".csv"):
+        #     self.ci_summary_table_path = self.ci_summary_table_path + ".csv"
+        if not self.table_save_path.endswith(".csv"):
+            self.table_save_path = self.table_save_path + ".csv"
         if build_new:
             if os.path.isfile(self.LR_mean_coefficients_table_file_path):
                 os.remove(self.LR_mean_coefficients_table_file_path)
             else:
-                print(self.LR_mean_coefficients_table_file_path, "does not exist")
+                print((self.LR_mean_coefficients_table_file_path, "does not exist"))
             self.coeffs_table = self.build_features_importance_df()
             self.save_table()
             self.mean_coefficients_table_df = self.save_mean_coefficients_table()
@@ -1785,13 +1845,13 @@ class LR_Feature_importance:
         except:
             colors_list = ["b" for x in self.file_names_list]
         sns.set(font_scale=self.font_scale)
-        ax_sns = sns.catplot(x="Covariate coefficient", y="Covariates names",
-                             data=self.coeffs_table, hue="category", capsize=.2,
-                             ax=self.ax, order=self.long_name_order,
+        sns.set_style(self.style)
+        g = sns.catplot(x="Covariate coefficient", y="Covariates names",data=self.coeffs_table, order=self.long_name_order,
                              hue_order=self.file_names_list, n_boot=self.n_boots, ci=self.ci,
                              kind="bar", palette=sns.color_palette(colors_list),
                              height=self.figsize[0],
                              aspect=float(self.figsize[1]) / self.figsize[0])
+        self.ax=g.fig.get_axes()[0]
         plt.close(2)
         self.sns_plot_params_update()
         if self.show_values_on_bar:
@@ -1813,7 +1873,7 @@ class LR_Feature_importance:
         self.ax.set_ylabel('')
         self.ax.set_xlabel('Logistic regression covariates coefficients', fontsize=self.font_size)
         self.ax.tick_params(labelsize=self.font_size)
-        if self.remove_legend:
+        if self.remove_legend and self.ax.get_legend() is not None:
             self.ax.get_legend().remove()
         else:
             self.ax.legend(facecolor=None, frameon=False, loc='upper left')
@@ -1890,10 +1950,10 @@ class LR_Feature_importance:
             models_paths = [os.path.join(CI_path, x) for x in models_files]
             use_cols_path = os.path.join(path, "use_cols.txt")
             with open(use_cols_path, "rb") as fp:  # Pickling
-                use_cols = pickle.load(fp)
+                use_cols = pickle.load(fp,encoding='latin')
             use_cols = [x for x in use_cols if x != "eid"]
             for model_path in models_paths:
-                clf = pickle.load(open(model_path, 'rb'))
+                clf = pickle.load(open(model_path, 'rb'),encoding='latin')
                 imp_coef = pd.DataFrame({"Covariates names": use_cols,
                                          "Covariate coefficient": clf.coef_.flatten(),
                                          "category": cat})
@@ -1944,15 +2004,15 @@ class LR_Feature_importance:
             self.fig_path = fig_path
         if self.fig_path != []:
             plt.savefig(self.fig_path, dpi=self.dpi, frameon=False)
-            print('Saved fig to:', self.fig_path)
+            print(('Saved fig to:', self.fig_path))
         else:
             plt.savefig(self.fig_path[0], dpi=self.dpi, frameon=False)
-            print('Saved fig to:', self.fig_path[0])
+            print(('Saved fig to:', self.fig_path[0]))
 
     def save_table(self):
         if self.table_save_path != None:
             self.coeffs_table.to_csv(self.table_save_path, index=False)
-        print("Coeffs table saved to:", self.coeffs_table)
+        print(("Coeffs table saved to:", self.coeffs_table))
 
     def _summary_CI_col(self, row):
         print(row)
@@ -1961,8 +2021,7 @@ class LR_Feature_importance:
             row["CI 0.975"]) + ")"
 
     def calc_ci_table(self):
-        res1 = self.coeffs_table.groupby("Covariates names").quantile([0.025, 0.5, 0.975], axis=0, numeric_only=True,
-                                                                      interpolation='linear')
+        res1 = self.coeffs_table.groupby("Covariates names").quantile([0.025, 0.5, 0.975])
         res2 = pd.DataFrame(res1.unstack(level=-1).to_records()).set_index("Covariates names")
         res2.columns = ["CI 0.025", "Median", "CI 0.975"]
         res3 = self.coeffs_table.groupby("Covariates names").mean()
@@ -1971,19 +2030,20 @@ class LR_Feature_importance:
         res4 = res4.loc[:, ["CI 0.025", "Mean", "CI 0.975", "Median"]]
         res4.loc[:, "Summary"] = res4.apply(self._summary_CI_col, axis=1)
         self.features_ci_table = res4
-        res4.to_csv(self.ci_summary_table_name)
+        # res4.to_csv(self.ci_summary_table_path)
+        res4.to_csv(self.table_save_path)
 
     def add_covariate_name_todict_if_not_exists(self, ):
         for col in self.coeffs_table.loc[:, "Covariates names"]:
-            if col not in self.labels_dict.keys():
-                print("Adding col", col, "to labels_dictionary, check or add col to : ", self.Labels_file_path)
+            if col not in list(self.labels_dict.keys()):
+                print(("Adding col", col, "to labels_dictionary, check or add col to : ", self.Labels_file_path))
                 self.labels_dict[col] = col
-        self.labels_df = pd.DataFrame(data=self.labels_dict.items())
-        print("self.labels_df is:", self.labels_df)
+        self.labels_df = pd.DataFrame(data=list(self.labels_dict.items()))
+        print(("self.labels_df is:", self.labels_df))
         try:
             self.labels_df.to_csv(self.used_labels_df_path, index=False)
         except:
-            print("Couldnt save to used_labels_df_path:", self.used_labels_df_path)
+            print(("Couldnt save to used_labels_df_path:", self.used_labels_df_path))
 
 
 def simple_shap(model_folder_path, top_feat_num=10, n_rows=None,
@@ -2008,7 +2068,7 @@ def simple_shap(model_folder_path, top_feat_num=10, n_rows=None,
         top_k2 = pd.read_csv(os.path.join(model_folder_path, "top_k2.csv"))
     else:
         with open(x_test_path, 'rb') as fp:
-            Test_Data = pickle.load(fp)
+            Test_Data = pickle.load(fp,encoding='latin')
         df_v = Test_Data["X_display"]
         shap_v = pd.read_csv(shap_path, index_col="eid")
         shap_v.drop("BiaShap", axis=1, inplace=True)
@@ -2036,12 +2096,12 @@ def simple_shap(model_folder_path, top_feat_num=10, n_rows=None,
         top_k2.sort_values(by='SHAP_abs', inplace=True)
         top_k2.to_csv(os.path.join(model_folder_path, "top_k2.csv"), index=False)
     colorlist = top_k2['Sign']
-    labels_list = [variables_dict[x] if x in variables_dict.keys() else x.split("_")[0] for x in top_k2.Variable]
-    orig_name_list = [x for x in top_k2.Variable if x not in variables_dict.keys()]
-    labels_dict = dict(zip(top_k2.Variable.values, labels_list))
+    labels_list = [variables_dict[x] if x in list(variables_dict.keys()) else x.split("_")[0] for x in top_k2.Variable]
+    orig_name_list = [x for x in top_k2.Variable if x not in list(variables_dict.keys())]
+    labels_dict = dict(list(zip(top_k2.Variable.values, labels_list)))
     variables_dict.update(labels_dict)
     labels = [variables_dict[x] for x in top_k2.Variable]
-    print("Labels:", labels)
+    print(("Labels:", labels))
     figsize = (30, 24)
     fig, ax = plt.subplots(1, 1, figsize=figsize)
     ax = top_k2.plot.barh(x="Variable", y='SHAP_abs', color=top_k2.loc[:, "Sign"].values,
@@ -2089,8 +2149,8 @@ def comp_roc_groups(df, comp_roc_path=None, plot=True, dpi=100, leg_len=20, labe
     plt.rcParams['savefig.facecolor'] = 'white'
     bar_high_labels = [x for x in df.index.values if high_recogniser in x]
     bar_low_labels = [x for x in df.index.values if low_recogniser in x]
-    print ("bar_high_labels:", bar_high_labels)
-    print ("bar_low_labels:", bar_low_labels)
+    print(("bar_high_labels:", bar_high_labels))
+    print(("bar_low_labels:", bar_low_labels))
 
     bar_high = df.loc[bar_high_labels, "AUC"].values
     bar_low = df.loc[bar_low_labels, "AUC"].values
@@ -2103,7 +2163,7 @@ def comp_roc_groups(df, comp_roc_path=None, plot=True, dpi=100, leg_len=20, labe
 
     for key in replace_dict:
         print (key)
-        print (replace_dict[key])
+        print((replace_dict[key]))
         bar_high_labels = [x.replace(key, replace_dict[key]) for x in bar_high_labels]
     labels = wrap_labels(bar_high_labels, labels_length)
     ax.set_xticks([r for r in range(len(bar_high))])
@@ -2238,9 +2298,9 @@ def plot_calibration_curve(df, files_list=None, path=None, nbins=10, splits=3, f
         color_pallete = cm.get_cmap('viridis', len(files_list))
         color_dict = {}
         colors_list = color_pallete(np.linspace(0, 1, len(files_list)))
-        colors_dict = dict(zip(files_list, colors_list))
+        colors_dict = dict(list(zip(files_list, colors_list)))
     if type(leg_dict) == list:
-        leg_dict = dict(zip(files_list, files_list))
+        leg_dict = dict(list(zip(files_list, files_list)))
 
     fig, ax1 = plt.subplots(1, 1, figsize=fig_size)
 
@@ -2256,7 +2316,7 @@ def plot_calibration_curve(df, files_list=None, path=None, nbins=10, splits=3, f
     hist_dict = {}
     results_dict = {}
     for ind, label_name in enumerate(files_list):
-        print("****", label_name, "*******")
+        print(("****", label_name, "*******"))
         try:
             top_range = range_dict[label_name]
         except:
@@ -2275,16 +2335,16 @@ def plot_calibration_curve(df, files_list=None, path=None, nbins=10, splits=3, f
             leg_val = label_name
 
         if type(label_name) != str:
-            print("Label name:", label_name, " is not astring, might be nan")
+            print(("Label name:", label_name, " is not astring, might be nan"))
             continue
         with open(df.loc[label_name, "y_files"], 'rb') as fp_test:
-            y_test = pickle.load(fp_test)
+            y_test = pickle.load(fp_test,encoding="latin")
         with open(df.loc[label_name, "predictions_files"], 'rb') as fp_pred:
-            y_pred = pickle.load(fp_pred)
+            y_pred = pickle.load(fp_pred,encoding="latin")
 
         fraction_of_positives, mean_predicted_value, y_test_array, y_cal_prob_array = monotonic_calibration(
             y_test, y_pred, splits=splits, nbins=n_bins)
-        print("n_bins:", n_bins)
+        print(("n_bins:", n_bins))
         results_dict[label_name] = pd.DataFrame(index=np.arange(len(fraction_of_positives)),
                                                 columns=["True pos fraction", "pred pos fraction"])
         results_dict[label_name].loc[:, "True pos fraction"] = fraction_of_positives
@@ -2302,7 +2362,7 @@ def plot_calibration_curve(df, files_list=None, path=None, nbins=10, splits=3, f
                      linestyle="-", lw=lw, marker=marker, markersize=markersize, label=leg_val + "-"
                                                                                        + "{:.3f}".format(clf_score))
 
-            print("calibrated ", label_name, " brier score: ", clf_score)
+            print(("calibrated ", label_name, " brier score: ", clf_score))
     #             print("y_cal_prob_array of:",label_name," is:",y_cal_prob_array)
 
     #     ax1.set_xlim(0,xlim)
@@ -2310,8 +2370,8 @@ def plot_calibration_curve(df, files_list=None, path=None, nbins=10, splits=3, f
     if plot_hist:
         ax2 = ax1.twinx()
         x = np.arange(0, (nbins_hist + 1) / 10, 0.1)
-        y = pd.DataFrame(index=x, columns=hist_dict.keys())
-        for key in hist_dict.keys():
+        y = pd.DataFrame(index=x, columns=list(hist_dict.keys()))
+        for key in list(hist_dict.keys()):
             tmp_hist = np.histogram(hist_dict[key], bins=nbins_hist)
             y.loc[:, key] = tmp_hist[0]
         colors = [colors_dict[ind] for ind in y.columns]
@@ -2334,7 +2394,7 @@ def plot_calibration_curve(df, files_list=None, path=None, nbins=10, splits=3, f
     ax1.set_ylim(0, ylim)
     plt.tight_layout()
     if path != None:
-        print("Saving to:", path)
+        print(("Saving to:", path))
         plt.savefig(path, dpi=dpi, frameon=False)
     if plot:
         plt.show()
@@ -2345,7 +2405,7 @@ def monotonic_calibration(y_test, y_pred, splits, nbins):
     X = np.array(y_pred)
     y = np.array(y_test)
     ir = IsotonicRegression()
-    skf = StratifiedKFold(n_splits=splits, random_state=0, shuffle=False)
+    skf = StratifiedKFold(n_splits=splits, random_state=None, shuffle=False)
     y_true_list = []
     y_cal_prob_list = []
     for train_index, test_index in skf.split(X, y):
@@ -2371,10 +2431,10 @@ def monotonic_calibration(y_test, y_pred, splits, nbins):
 
 
 def get_key_name(val, dictionary):
-    for key in dictionary.keys():
+    for key in list(dictionary.keys()):
         if dictionary[key] == val:
             return key
-    print("No key for: ", val, " Dictionary is: ", dictionary)
+    print(("No key for: ", val, " Dictionary is: ", dictionary))
 
 
 def plot_legend(figsize, labels_list, colors_list, ncolumns=1):
@@ -2383,9 +2443,9 @@ def plot_legend(figsize, labels_list, colors_list, ncolumns=1):
     Plots, returns saves a legend as a fig
     """
     # Create a color palette
-    palette = dict(zip(labels_list, colors_list))
+    palette = dict(list(zip(labels_list, colors_list)))
     # Create legend handles manually
-    handles = [mpl.patches.Patch(color=palette[x], label=x) for x in palette.keys()]
+    handles = [mpl.patches.Patch(color=palette[x], label=x) for x in list(palette.keys())]
     # Create legend
     leg = plt.legend(handles=handles, ncol=ncolumns)
     # Get current axes object and turn off axis
@@ -2411,7 +2471,7 @@ def net_benefit_CI(df, files_list=None, path=None, leg_dict=[], figsize=(16, 9),
     #     print("colors_dict: ",colors_dict)
 
     if type(leg_dict) == list:
-        leg_dict = dict(zip(files_list, files_list))
+        leg_dict = dict(list(zip(files_list, files_list)))
     #     print("leg_dict:",leg_dict)
 
     plt.rc('font', size=fontsize)  # controls default text sizes
@@ -2438,13 +2498,13 @@ def net_benefit_CI(df, files_list=None, path=None, leg_dict=[], figsize=(16, 9),
             label_in_df
             #             print("label_in_df:",label_in_df)
             #             print("net_benefit:",net_benefit)
-            print("color_dict[label_in_df]", color_dict)
+            print(("color_dict[label_in_df]", color_dict))
             ax1 = sns.lineplot(x="pt", y=label, data=net_benefit, ax=ax1, n_boot=1000, color=color_dict[label_in_df])
             short_label = label.replace("LR Singles ", "").replace(" with whr", "").replace("BDT Baseline ", "")
             labal_list.append(mpatches.Patch(color=color_dict[label_in_df], label=short_label))
     net_benefit.set_index("pt", inplace=True)
     limits_df = net_benefit.loc[:, :].drop("Test all", axis=1)
-    print ("limits_df.max():", limits_df.max())
+    print(("limits_df.max():", limits_df.max()))
 
     xticks = [float(x) for x in x_ticks]
     ax1.set_xlim(0, max(xticks))
@@ -2462,7 +2522,7 @@ def net_benefit_CI(df, files_list=None, path=None, leg_dict=[], figsize=(16, 9),
 
     plt.tight_layout()
     if path != None:
-        print("Saving to:", path)
+        print(("Saving to:", path))
         plt.savefig(path, dpi=dpi, frameon=False)
     if plot:
         plt.show()
@@ -2511,7 +2571,7 @@ def net_benefit_single(df, leg_dict, files_list=None, nbins=10, splits=10, file_
 
         else:
             with open(tmp_file_path, 'rb') as fp_test:
-                tmp_file = pickle.load(fp_test)
+                tmp_file = pickle.load(fp_test,encoding="latin")
             y_test = tmp_file["y_val.values"].flatten()
             y_pred = tmp_file["y_proba"]
         #         print("******** Label:",label," **************")
@@ -2520,7 +2580,7 @@ def net_benefit_single(df, leg_dict, files_list=None, nbins=10, splits=10, file_
         y = np.array(y_test)
 
         ir = IsotonicRegression()
-        skf = StratifiedKFold(n_splits=splits, random_state=0, shuffle=False)
+        skf = StratifiedKFold(n_splits=splits, random_state=None, shuffle=False)
         y_true_list = []
         y_cal_prob_list = []
         for train_index, test_index in skf.split(X, y):
@@ -2571,7 +2631,7 @@ def plot_legend(figsize, colors_dict, ncolumns=1, font_size=16,
     # Create a color palette
     palette = colors_dict
     # Create legend handles manually
-    handles = [mpl.patches.Patch(color=palette[x], label=x) for x in palette.keys()]
+    handles = [mpl.patches.Patch(color=palette[x], label=x) for x in list(palette.keys())]
     # Create legend
     legend = plt.legend(handles=handles, ncol=ncolumns, fontsize=font_size, frameon=False)
     if leg_text != None:
@@ -2584,7 +2644,7 @@ def plot_legend(figsize, colors_dict, ncolumns=1, font_size=16,
     bbox = legend.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
 
     fig.savefig(fig_path, dpi=200, bbox_inches=bbox)
-    print("Save legend figure to:", fig_path)
+    print(("Save legend figure to:", fig_path))
     #     plt.savefig(fig_path,dpi=dpi)
     plt.show()
     return legend
@@ -2646,7 +2706,7 @@ def conv_a1c(val):
 def filter_hba1c(path):
     DF = pd.read_csv(path, index_col="eid")
     DF["HbA1c%"] = DF.apply(conv_hba1c, axis=1)
-    print("Number of participants with HbA1c%>6.5%: ", DF.loc[DF["HbA1c%"] > 6.5, "HbA1c%"].count())
+    print(("Number of participants with HbA1c%>6.5%: ", DF.loc[DF["HbA1c%"] > 6.5, "HbA1c%"].count()))
     fig, ax = plt.subplots(1, 1, figsize=(16, 9))
     DF.loc[DF["HbA1c%"] > 6.5, "HbA1c%"].hist()
     ax.set_title("Patricipants with Hba1c>6.5%")
@@ -2667,7 +2727,7 @@ def plot_legend(colors_dict, ncolumns=1, font_size=16,
     # Create a color palette
     palette = colors_dict
     # Create legend handles manually
-    handles = [mpl.patches.Patch(color=palette[x], label=x) for x in palette.keys()]
+    handles = [mpl.patches.Patch(color=palette[x], label=x) for x in list(palette.keys())]
     # Create legend
     legend = plt.legend(handles=handles, ncol=ncolumns, fontsize=font_size, frameon=False)
     if leg_text != None:
@@ -2680,7 +2740,7 @@ def plot_legend(colors_dict, ncolumns=1, font_size=16,
     bbox = legend.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
 
     fig.savefig(fig_path, dpi=200, bbox_inches=bbox)
-    print("Save legend figure to:", fig_path)
+    print(("Save legend figure to:", fig_path))
     #     plt.savefig(fig_path,dpi=dpi)
     plt.show()
     return legend
@@ -2714,14 +2774,11 @@ def extract_latest_values(df, encodings_list):
 # In[318]:
 
 
-def convert_hba1c_mmol_mol_2_percentage(row):
-    for col in row.columns:
-        try:
-            row[col] = 0.0915 * row[col] + 2.15
-        except:
-            row[col] = None
-    return row
-
+def convert_hba1c_mmol_mol_2_percentage(col):
+    try:
+        return 0.0915 * col + 2.15
+    except:
+        return None
 
 def return_clean_data(df_to_filter_path, All_disease_data_df, metformin=1140884600, Insulin=3):
     df_to_filter = pd.read_csv(df_to_filter_path, index_col="eid")
@@ -2749,7 +2806,7 @@ def conv_a1c(val):
 def filter_hba1c(path):
     DF = pd.read_csv(path, index_col="eid")
     DF["HbA1c%"] = DF.apply(conv_hba1c, axis=1)
-    print("Number of participants with HbA1c%>6.5%: ", DF.loc[DF["HbA1c%"] > 6.5, "HbA1c%"].count())
+    print(("Number of participants with HbA1c%>6.5%: ", DF.loc[DF["HbA1c%"] > 6.5, "HbA1c%"].count()))
     fig, ax = plt.subplots(1, 1, figsize=(16, 9))
     DF.loc[DF["HbA1c%"] > 6.5, "HbA1c%"].hist()
     ax.set_title("Patricipants with Hba1c>6.5%")

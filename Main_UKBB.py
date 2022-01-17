@@ -1,39 +1,18 @@
-load_saved_data=False
-from All import *
-from UKBB_Functions import *
-# from Logistic_regression_analysis import *
+from Age_n_Sex_Imp import *
+from UKBB_Func_Final import *
+
 import os
 import sys
 import matplotlib.pyplot as plt
 from addloglevels import sethandlers
 import datetime
-from Calc_CI import main as Main_CI
-from CI_Configs import runs
-Calc_LR = False
-CalcOnlyLR = False
-Calc_CI=True
-from sklearn.linear_model import LogisticRegressionCV
-Qworker = '/home/edlitzy/pnp3/lib/queue_tal/qworker.py'
 
 """Script used to calculate probabilities either for Returning participants based on Non-Returning participants model
 if mode=="ALL" and USE_PROBA==True (i.e. the returning participants will be test set), otherwise, if mode==Retrurning, will only calculate the Returning participants 
 results based on themselves (i.e. part of it will be train and part will be test sets., if mode=="ALL" and 
 USE_PROBA==False, will ignore the returning participants """
 plt.ion()  # Enables closing of plt figures on the run
-NAME=BASIC_PROB_BASED_JOB_NAME[0]
-check_run=runs(NAME,only_check_model=True) #Checkss if a model exists
-SAVE_FOLDER=check_run.model_paths
-TRAIN_PATH=check_run.train_val_file_path
-TEST_PATH=check_run.test_file_path
 
-print "Mode:",check_run.mode
-print "TRAIN_PATH:",TRAIN_PATH
-print "TEST_PATH:",TEST_PATH
-
-try:
-    Batch_size=check_run.batch_size
-except:
-    Batch_size=20.0
 # Job_ID = ["2443-0.0"]  #
 #   # Data_Job_Names = {"6150-0.0": "Vascular", "2443-0.0": "Diabetes", "2453-0.0": "Cancer", "4041-0.0": "Gestational diabetes","21001-0.0":'BMI'}
 #
@@ -113,13 +92,6 @@ except:
 # # File_Name_Array = ["Vascular_Healthy_Comb.csv","Diabetes_Healthy_Comb.csv"]
 # No_symp_dict = {"6150-0.0": -7, "2443-0.0": 0, '2453-0.0': 0, '21001-0.0': "nan"}
 # Sub_Class_array = ["All"]  # "All",, "All"
-try:
-    use_explicit_columns=USE_EXPLICIT_COLUMNS #Used in FINRISC in order to take only the exact deatures, and not columns starting with the features names
-except:
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    print("!!!!!!!! NOT USING EXPLICIT COLUMN NAMES !!!!!!!")
-    print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-    use_explicit_columns = False
 
 if USE_FAKE_QUE:
     from queue_tal.qp import fakeqp as qp
@@ -210,8 +182,8 @@ def upload_jobs(q):
         #file_name = File_Name_Array[ind]
         feat_path = BASIC_FEAT_PATH+FEAT_PATH[ind]
 
-        print ("Started working on", JOB_NAME[ind])
-        Save_2_folder = + JOB_NAME[ind]+"_" + job_name + "/"
+        print(("Started working on", JOB_NAME[ind]))
+        Save_2_folder = SAVE_FOLDER + JOB_NAME[ind]+"_" + job_name + "/"
         final_folder = Save_2_folder + job_name + "_Results/"
 
         if not os.path.exists(Save_2_folder):
@@ -228,20 +200,20 @@ def upload_jobs(q):
         if not Finalize_Only:
             Load_N_Data(TRAIN_PATH, Target_ID, final_folder, Sub_Class_ID, job_name, feat_path, no_symp_code, mode_A
                         ,USE_PROBA, No_symp_dict, DEBUG, USE_FAKE_QUE, VISITS, NROWS_RETURN, NROWS,
-                        check_run.charac_selected, CHARAC_ID, PROBA_PATH[ind], USE_PRS,Use_SNPs, Select_Traits_Gen,
+                        CHARAC_SELECTED, CHARAC_ID, PROBA_PATH[ind], USE_PRS,Use_SNPs, Select_Traits_Gen,
                         PRS_COLS,PRS_PATH, ALL_TEST_AS_VAL, Thresh_in_Column, Thresh_in_Row, Split,
-                        use_explicit_columns=use_explicit_columns,load_saved_data=load_saved_data)
+                        Use_imp_flag=Use_imp_flag)
 
-            for SN in np.arange(Basic_HYP_PAR_ITER):
+            for SN in range(Basic_HYP_PAR_ITER):
                 Params_dict = Choose_params(Hyp_Param_Dict)
 
-                print ("Job Name:", job_name, " SN: ", SN)
+                print(("Job Name:", job_name, " SN: ", SN))
                 waiton.append(q.method(Predict, tuple([SN] + [Params_dict] + [Save_2_folder] +
                                                       [job_name]+[final_folder]+[Choose_N_Fold]+[USE_PROBA]+[Refit_Model])))
-                if SN == (len(Basic_HYP_PAR_ITER)-1):
+                if SN == (len(list(range(Basic_HYP_PAR_ITER)))-1):
                     q.waitforresults(waiton)
         if SORT:
-            print ("Finalizing: ", job_name)
+            print(("Finalizing: ", job_name))
             TempPDFsQ.append(q.method(Sort_AUC_APS, tuple(
                 [job_name]+[Save_2_folder]+[final_folder]+[Target_ID]+[PROBA_PATH[ind]]+[CALC_SHAP]+[mode_A]+[USE_PROBA] +
                 [BASIC_JOB_NAME[ind]]+[Refit_Model])))
@@ -261,7 +233,7 @@ def upload_jobs(q):
 
 
 def upload_prob_jobs(q):
-    print ("Feat path is: ", RET_FEAT_PATH)
+    print(("Feat path is: ", RET_FEAT_PATH))
     R_MODE="R"
     Hyp_Param_Dict = Hyp_Param_Dict_R
 
@@ -270,17 +242,18 @@ def upload_prob_jobs(q):
     # Hyp_Param_Dict['eval_at'] = [[1, 10, 100]]
 
     for ind, Target_ID in enumerate(Job_ID):
+
         no_symp_code = No_symp_dict[Target_ID]
         Sub_Class_ID = Sub_Class_array[ind]
         job_name = Job_name_dict[Target_ID]
         #file_name = File_Name_Array[ind]
         feat_path = BASIC_FEAT_PATH+RET_FEAT_PATH[ind]
-        print ("Started working on", job_name)
-        Save_2_folder = check_run.model_paths+"/"
-        final_folder = os.path.join(Save_2_folder, job_name + "_Results/")
+        print(("Started working on", job_name))
+        Save_2_folder = SAVE_FOLDER + BASIC_PROB_BASED_JOB_NAME[ind]+"_" + job_name + "/"
+        final_folder = Save_2_folder + job_name + "_Results/"
         Data_Folder = BASIC_DATA_PATH + JOB_NAME[ind]+"_" + job_name + "/" + job_name + "_Results/" #BASIC_DATA_PATH is where original y_train stored
         if REFIT_SERIAL_MODELS: #Checking wether to refit a model folder just made in previous step, or use a pedefined folder
-            pre_trained_model_folder = check_run.model_paths + JOB_NAME[ind] + "_" + job_name+"/" + job_name+"_Results/"
+            pre_trained_model_folder = SAVE_FOLDER + JOB_NAME[ind] + "_" + job_name+"/" + job_name+"_Results/"
             model=pre_trained_model_folder
         else:
             pre_trained_model_folder = Refit_Return_Model_Path
@@ -298,15 +271,14 @@ def upload_prob_jobs(q):
             print("Loading new data")
             Data = Load_N_Data(TRAIN_PATH, Target_ID, final_folder, Sub_Class_ID, job_name, feat_path, no_symp_code, R_MODE,
                            RE_USE_PROBA, No_symp_dict, DEBUG, USE_FAKE_QUE, VISITS, NROWS_RETURN, NROWS,
-                           check_run.charac_selected, CHARAC_ID, PROBA_PATH, USE_PRS,Use_SNPs,Select_Traits_Gen, PRS_COLS, PRS_PATH,
-                           ALL_TEST_AS_VAL,Thresh_in_Column, Thresh_in_Row,Split,
-                               use_explicit_columns=use_explicit_columns,load_saved_data=load_saved_data)
+                           CHARAC_SELECTED, CHARAC_ID, PROBA_PATH, USE_PRS,Use_SNPs,Select_Traits_Gen, PRS_COLS, PRS_PATH,
+                           ALL_TEST_AS_VAL,Thresh_in_Column, Thresh_in_Row,Split,Use_imp_flag=Use_imp_flag)
 
         elif os.path.exists(final_folder) and RE_USE_PROBA:
             Data = Load_Prob_Based_Data(Target_ID, final_folder, Data_Folder, Sub_Class_ID, job_name, feat_path,
                                         no_symp_code, NROWS_RETURN, DISEASE_PROBA_DICT, RE_USE_PROBA, Lite, HowHow)
         elif (not os.path.exists(final_folder)) and RE_USE_PROBA:
-            print(final_folder, " required for probability data")
+            print((final_folder, " required for probability data"))
             sys.exit()
 
         X = Data["df_Features"]
@@ -316,17 +288,16 @@ def upload_prob_jobs(q):
             Models = [os.path.join(os.path.dirname(pre_trained_model_folder),f)
                       for f in os.listdir(pre_trained_model_folder) if
                       (f.endswith('.txt') and ("CV_Model" in f))]
-        BN_range=np.ceil(float(Prob_HYP_PAR_ITER) / Batch_size)
-        for BN in np.arange(BN_range):
-            print ("Started Job Name:", job_name, " BN: ", BN)
+        for SN in range(Prob_HYP_PAR_ITER):
+            print(("Started Job Name:", job_name, " SN: ", SN))
             Params_dict = Choose_params(Hyp_Param_Dict)
             if Calc_Transfer_Learning:
                 model=random.choice(Models) #Each iteration choosing new model for testing
-            waiton.append(q.method(Predict_prob, tuple([BN] + [Params_dict] +
+            waiton.append(q.method(Predict_prob, tuple([SN] + [Params_dict] +
                                                        [X, y, Data['cat_names'], Data['Rel_Feat_Names']] +
                                                        [Save_2_folder] + [job_name] +
-                                                       [Choose_N_Fold]+[final_folder]+[model]+[Refit_Returned]+[Batch_size])))
-            if BN == (BN_range - 1):
+                                                       [Choose_N_Fold]+[final_folder]+[model]+[Refit_Returned])))
+            if SN == (Prob_HYP_PAR_ITER - 1):
                 print ("Waiting for create_PDF to finish")
                 q.waitforresults(waiton)
         # q.waitforresults(waiton)
@@ -336,9 +307,8 @@ def upload_prob_jobs(q):
         # Sort_Prob_AUC_APS(job_name, Save_2_folder, final_folder, Target_ID, CALC_P_SHAP, USE_PROBA, X, y,
         #                   Hyp_Param_Dict['metric'], NFOLD,BASIC_PROB_BASED_JOB_NAME)
 
-
 def Finalize_prob_jobs(q):
-    print ("Feat path is: ", RET_FEAT_PATH)
+    print(("Feat path is: ", RET_FEAT_PATH))
     R_MODE="R"
     Hyp_Param_Dict = Hyp_Param_Dict_R
     for ind, Target_ID in enumerate(Job_ID):
@@ -347,14 +317,12 @@ def Finalize_prob_jobs(q):
         job_name = Job_name_dict[Target_ID]
         #file_name = File_Name_Array[ind]
         feat_path = BASIC_FEAT_PATH+RET_FEAT_PATH[ind]
-        print ("Finalizing", job_name)
-
-        Save_2_folder = check_run.model_paths + "/"
-        final_folder = os.path.join(Save_2_folder, job_name + "_Results/")
+        print(("Finalizing", job_name))
+        Save_2_folder = SAVE_FOLDER + BASIC_PROB_BASED_JOB_NAME[ind]+"_" + job_name + "/"
+        final_folder = Save_2_folder + job_name + "_Results/"
         Data_Folder = BASIC_DATA_PATH + JOB_NAME[ind]+"_" + job_name + "/" + job_name + "_Results/" #BASIC_DATA_PATH is where original y_train stored
-
         if REFIT_SERIAL_MODELS: #Checking wether to refit a model folder just made in previous step, or use a pedefined folder
-            pre_trained_model_folder = check_run.model_paths + JOB_NAME[ind] + "_" + job_name+"/" + job_name+"_Results/"
+            pre_trained_model_folder = SAVE_FOLDER + JOB_NAME[ind] + "_" + job_name+"/" + job_name+"_Results/"
             model=pre_trained_model_folder
         else:
             pre_trained_model_folder = Refit_Return_Model_Path
@@ -367,14 +335,12 @@ def Finalize_prob_jobs(q):
         print("Loading data")
         Data = Load_N_Data(TRAIN_PATH, Target_ID, final_folder, Sub_Class_ID, job_name, feat_path, no_symp_code, R_MODE,
                        RE_USE_PROBA, No_symp_dict, DEBUG, USE_FAKE_QUE, VISITS, NROWS_RETURN, NROWS,
-                       check_run.charac_selected, CHARAC_ID, PROBA_PATH, USE_PRS,Use_SNPs,Select_Traits_Gen, PRS_COLS, PRS_PATH,
-                       ALL_TEST_AS_VAL,Thresh_in_Column, Thresh_in_Row,Split,
-                           use_explicit_columns=use_explicit_columns,load_saved_data=load_saved_data)
+                       CHARAC_SELECTED, CHARAC_ID, PROBA_PATH, USE_PRS,Use_SNPs,Select_Traits_Gen, PRS_COLS, PRS_PATH,
+                       ALL_TEST_AS_VAL,Thresh_in_Column, Thresh_in_Row,Split,Use_imp_flag=Use_imp_flag)
         Test_Data = Load_N_Data(TEST_PATH, Target_ID, final_folder, Sub_Class_ID, job_name, feat_path, no_symp_code, R_MODE,
                        RE_USE_PROBA, No_symp_dict, DEBUG, USE_FAKE_QUE, VISITS, NROWS_RETURN, NROWS,
-                       check_run.charac_selected, CHARAC_ID, PROBA_PATH, USE_PRS,Use_SNPs,Select_Traits_Gen, PRS_COLS, PRS_PATH,
-                       ALL_TEST_AS_VAL,Thresh_in_Column, Thresh_in_Row,Split,train_set=False,
-                                use_explicit_columns=use_explicit_columns,load_saved_data=load_saved_data)
+                       CHARAC_SELECTED, CHARAC_ID, PROBA_PATH, USE_PRS,Use_SNPs,Select_Traits_Gen, PRS_COLS, PRS_PATH,
+                       ALL_TEST_AS_VAL,Thresh_in_Column, Thresh_in_Row,Split,Use_imp_flag=Use_imp_flag)
 
         X = Data["df_Features"]
         y = Data["DF_Targets"]
@@ -384,18 +350,19 @@ def Finalize_prob_jobs(q):
 
         print ("Sorting results")
         if not os.path.isfile(final_folder + job_name + "_Score_Table.csv"):
-            for SN in np.arange(Prob_HYP_PAR_ITER):
+            for SN in range(Prob_HYP_PAR_ITER):
                 AVG_Prob_AUC_APS_per_SN(job_name, Save_2_folder, final_folder, SN)
         TempPDFsQ.append(q.method(Sort_Prob_AUC_APS, tuple([job_name]+[Save_2_folder] + [final_folder]+[Target_ID] +
                          [CALC_P_SHAP] + [USE_PROBA] + [X] + [y] +[X_test]+[y_test]+ [Hyp_Param_Dict['metric']] +
                           [NFOLD]+[BASIC_PROB_BASED_JOB_NAME[ind]])))
+
         if ind == (len(Job_ID) - 1):
             print ("Waiting for create_PDF to finish")
             q.waitforresults(TempPDFsQ)
-
+        #
         # if Finalize_Prob_Based_Only:
         #     Test_ind_list=[]
-        #     skf = StratifiedKFold(n_splits=NFOLD, random_state=0, shuffle=False)
+        #     skf = StratifiedKFold(n_splits=NFOLD, random_state=None, shuffle=False)
         #     for train_index, test_index in skf.split(X, y.values.flatten()):
         #         Test_ind_list.append(test_index)
         #
@@ -404,67 +371,38 @@ def Finalize_prob_jobs(q):
         #     TempPDFsQ.append(q.method(create_pdf_prob, tuple(
         #         [Hyp_Param_Dict['metric']] + [Save_2_folder] + [final_folder]
         #         + [job_name] + [Target_ID] + [CALC_P_SHAP] +
-        #         [NFOLD] + [y.iloc[Flat_Test_ind_list]] + [X.iloc[Flat_Test_ind_list, :]] +
-        #         [BASIC_PROB_BASED_JOB_NAME[ind]])))
-        #
+        #         [NFOLD] + [Y_DF.iloc[Flat_Test_ind_list]] + [X.iloc[Flat_Test_ind_list, :]] + [BASIC_PROB_BASED_JOB_NAME[ind]])))
         #
         #     if ind == (len(Job_ID) - 1):
         #         print ("Waiting for create_PDF to finish")
         #         q.waitforresults(TempPDFsQ)
 
-        if Calc_CI:
-            Main_CI(BASIC_PROB_BASED_JOB_NAME[ind])
-
 def main():
     # if CALC_PROB:
-    if not CalcOnlyLR:
-        if Calc_Base_Prob:
-            print ("Working on:" , BASIC_JOB_NAME," at:", datetime.datetime.now())
-            with qp(jobname=check_run.run_name, max_u=600/(NJOBS*N_THREADS), mem_def=MEM, trds_def=NJOBS*N_THREADS,
-                    q=['himem7.q'],tryrerun=True,delay_batch=30,qworker=Qworker) as q:
+    if Calc_Base_Prob:
+        print(("Working on:" , BASIC_JOB_NAME," at:", datetime.datetime.now()))
+
+        with qp(jobname=JOB_NAME[0], max_u=600/(NJOBS*N_THREADS), mem_def=MEM, trds_def=NJOBS*N_THREADS, q=['himem7.q'],
+                tryrerun=True) as q:
+            os.chdir('/net/mraid08/export/jafar/Microbiome/Analyses/Edlitzy/tempq_files/')
+            q.startpermanentrun()
+            upload_jobs(q)
+    if Calc_Prob_Based_Prob:
+        if not Finalize_Prob_Based_Only:
+            print(("Working on" , BASIC_PROB_BASED_JOB_NAME, " at:", datetime.datetime.now()))
+            with qp(jobname=BASIC_PROB_BASED_JOB_NAME[0], max_u=500 / (NJOBS * P_THREADS), mem_def='3G', trds_def=NJOBS * P_THREADS,
+                    q=['himem7.q'],tryrerun=True) as q:
                 os.chdir('/net/mraid08/export/jafar/Microbiome/Analyses/Edlitzy/tempq_files/')
                 q.startpermanentrun()
-                upload_jobs(q)
+                upload_prob_jobs(q)
 
-        if Calc_Prob_Based_Prob:
-            if not Finalize_Prob_Based_Only:
-                print ("Working on" , BASIC_PROB_BASED_JOB_NAME, " at:", datetime.datetime.now())
-                with qp(jobname=check_run.run_name, max_u=500 / (NJOBS * P_THREADS), mem_def='5G', trds_def=NJOBS * P_THREADS,
-                        q=['himem7.q'],tryrerun=True,delay_batch=30,qworker=Qworker) as q:
-                    os.chdir('/net/mraid08/export/jafar/Microbiome/Analyses/Edlitzy/tempq_files/')
-                    q.startpermanentrun()
-                    upload_prob_jobs(q)
-        print ("Finalizing on", BASIC_PROB_BASED_JOB_NAME, " at:", datetime.datetime.now())
-        with qp(jobname="Fin_"+check_run.run_name, max_u=500 / (NJOBS * P_THREADS), mem_def='5G',
-                trds_def=2, q=['himem7.q'], tryrerun=True,qworker=Qworker) as q:
+        print(("Finalizing on", BASIC_PROB_BASED_JOB_NAME, " at:", datetime.datetime.now()))
+        with qp(jobname="Fin_"+BASIC_PROB_BASED_JOB_NAME[0], max_u=500 / (NJOBS * P_THREADS), mem_def='3G',
+                trds_def=10,q=['himem7.q'], tryrerun=True) as q:
             os.chdir('/net/mraid08/export/jafar/Microbiome/Analyses/Edlitzy/tempq_files/')
             q.startpermanentrun()
             Finalize_prob_jobs(q)
-    # else:
-    #     print("In order to calculate GBDT probabilities - change the CalcOnlyLR variable at the top of Main_UKBB_Final script")
-    # if Calc_LR:
-    #     all_folders = os.listdir(BASIC_FOLDER_NAME)
-    #     all_folders=[]
-    #     if not os.path.exists(check_run.model_paths):
-    #         os.makedirs(check_run.model_paths)
-    #
-    #     relevant_folder_names = [x for x in all_folders if
-    #                              not (x.endswith("pdfs") or x.endswith("shap_folder") or x.endswith("imputed") or x.endswith("LR_comparison"))]
-    #     with qp(jobname="LogReg", q=['himem7.q'], mem_def='5G', trds_def=1, tryrerun=True,max_u=650, delay_batch=20) as q:
-    #         os.chdir('/net/mraid08/export/jafar/Microbiome/Analyses/Edlitzy/tempq_files/')
-    #         q.startpermanentrun()
-    #         tkns = []
-    #         pdf=[]
-    #         for ind,job_name in enumerate(relevant_folder_names):
-    #             pdf_path=os.path.join(PDF_FOLDER_PATH,job_name+".pdf")
-    #             param=(BASIC_FOLDER_NAME, job_name,pdf_path)
-    #             print ("job_name:", job_name)
-    #             tkns.append(q.method(summary_logistics_plots, param))
-    #             if ind == (len(relevant_folder_names) - 1):
-    #                 print ("Waiting for create_PDF to finish")
-    #                 q.waitforresults(tkns)
-    #     results_df=sort_csv(LR_folder_name)
-    #     print(results_df)
+
     # if REFIT_SERIAL_MODELS:
     #     print "Working on" , BASIC_TL_JOB_NAME, " at:", datetime.datetime.now()
     #     with qp(jobname=BASIC_TL_JOB_NAME, max_u=400 / (NJOBS * P_THREADS), mem_def=MEM, trds_def=NJOBS * P_THREADS,
@@ -473,7 +411,6 @@ def main():
     #         os.chdir('/net/mraid08/export/jafar/Microbiome/Analyses/Edlitzy/tempq_files/')
     #         q.startpermanentrun()
     #         upload_TL_jobs(q)
+sethandlers()
 
-if __name__=="__main__":
-    sethandlers()
-    main()
+main()

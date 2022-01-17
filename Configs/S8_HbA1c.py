@@ -102,7 +102,7 @@ Refit_Return_Model_Path = None  # '/net/mraid08/export/jafar/Yochai/UKBB_Runs/mo
 HowHow = "left"  # "inner" - take only participants who has probabilities for other disease as well, "left" - take all
 CALC_P_SHAP = True  # Whether or not to calculate the SHAP values for the Preob based predictions
 SORT_Prob = True
-Finalize_Prob_Based_Only = True
+Finalize_Prob_Based_Only = False
 
 if REFIT_SERIAL_MODELS or Refit_Return_Model_Path:
     Refit_Returned = True

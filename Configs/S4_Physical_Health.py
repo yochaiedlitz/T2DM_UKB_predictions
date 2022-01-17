@@ -63,14 +63,14 @@ Select_Top_Traits_Gen_arr_names = ['HbA1c_MANTRA', 't2d_mega_meta', "MAGIC_Scott
                                    'MAGIC_Scott_FI_adjBMI', 'MAGIC_Scott_FI', 'MAGIC_HbA1C', 'Manning_FG',
                                    'Manning_BMI_ADJ_FG',
                                    'Manning_Fasting_Insulin', 'Manning_BMI_ADJ_FI', 'HBA1C_ISI']  #
-USE_FAKE_QUE = False
+USE_FAKE_QUE = True
 NROWS = None  # 1-500000 or None
 NROWS_RETURN = None  # How many returning participants to load
 Split = True #Wheter or not to split data to train and test, should be false only for final testing
 Use_imp_flag=True
 Logistic_regression=False #"Should be LR for Linear regression or LGBM for treees"
 
-DEBUG = False
+DEBUG = True
 USE_PROBA = True  # Whether or not to either calculate probability if working on all participants or to use probabilities
 #  calculated if working with returning participants
 USE_PRS = False  # wether to use PRS reults

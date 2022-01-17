@@ -17,7 +17,6 @@ from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes, zoomed_inset_axes
 import matplotlib.gridspec as gridspec
 
-from sklearn.externals import joblib
 from sklearn.calibration import CalibratedClassifierCV, calibration_curve
 from sklearn.isotonic import IsotonicRegression
 from sklearn.model_selection import train_test_split, StratifiedKFold
@@ -37,4 +36,14 @@ from collections import OrderedDict
 import random
 import re
 
-import UKBB_Func
+# from . import UKBB_Func
+def standarise_df(df):
+    fit_col = df.columns
+    x_std_col = [x for x in fit_col if not x.endswith("_na")]
+    x_na_col = [x for x in fit_col if x.endswith("_na")]
+    x_train_std = df[x_std_col]
+    x_train_std = (x_train_std - np.mean(x_train_std, axis=0)) / np.std(x_train_std, axis=0)
+    x_train_std_na_col = x_train_std.loc[:, x_train_std.isna().sum() > 0].columns.values
+    x_train_std.loc[:, x_train_std.isna().sum() > 0] = df.loc[:, x_train_std_na_col]
+    x_train_std[x_na_col] = df[x_na_col]
+    return x_train_std

@@ -39,7 +39,7 @@ quantile_path = "/home/edlitzy/UKBB_Tree_Runs/For_article/figures/fig3_quantile_
 test_labels = ['BDT Singles Anthropometry', 'BDT Singles Blood tests', "BDT Singles All"]
 leg_labels = ['Anthropometrics', 'Blood Tests', "All features"]
 cmap = sns.color_palette(color, singles_df.shape[0])
-color_dict = dict(zip(singles_df.sort_values(by="AUC", ascending=True).index.values, cmap))
+color_dict = dict(list(zip(singles_df.sort_values(by="AUC", ascending=True).index.values, cmap)))
 color_dict['BDT Singles All'] = "blue"
 color_dict['BDT Singles Blood tests'] = 'red'
 color_dict['BDT Singles Anthropometry'] = 'green'
@@ -94,7 +94,7 @@ legend_len = 20
 sort = True
 color = 'plasma'
 cmap = sns.color_palette(color, singles_df.shape[0])
-color_dict = dict(zip(singles_df.sort_values(by="AUC", ascending=True).index.values, cmap))
+color_dict = dict(list(zip(singles_df.sort_values(by="AUC", ascending=True).index.values, cmap)))
 sum_figsize = (30, 25)
 roc_auc_sum_path = "/home/edlitzy/UKBB_Tree_Runs/For_article/Figs_for_article_rev2/roc_auc_sum_all.png"
 
@@ -338,14 +338,14 @@ colors_df = pd.read_csv("/home/edlitzy/UKBB_Tree_Runs/For_article/colors.csv", i
 colors_df
 folder_path = "/home/edlitzy/UKBB_Tree_Runs/For_article/Imputed_screened/New_Baseline_compare"
 fig_path = "/home/edlitzy/UKBB_Tree_Runs/For_article/Imputed_screened/figures/figure1/Quantlites_baseline_compare.jpg"
-print(os.listdir(folder_path))
+print((os.listdir(folder_path)))
 
 xlabels = [str(x) for x in np.arange(1, 11)]
 colors_df = pd.read_csv("/home/edlitzy/UKBB_Tree_Runs/For_article/colors.csv", index_col="File name")
 
 folder_path = "/home/edlitzy/UKBB_Tree_Runs/For_article/Imputed_screened/New_Baseline_compare"
 fig_path = "/home/edlitzy/UKBB_Tree_Runs/For_article/Imputed_screened/figures/figure1/Quantlites_baseline_compare.jpg"
-print(os.listdir(folder_path))
+print((os.listdir(folder_path)))
 # all_dirs=['A1c_strat', 'New_Addings', 'New_Singles', 'New_Singles_LR']
 folders_basename_list = ['SA_GDRS', 'LR_Finrisc', 'LR_Antro_neto_whr', 'LR_Five_Blood_Tests',
                          "All_Diabetes"]
@@ -640,7 +640,7 @@ comp_aps_groups(df, comp_aps_path=comp_aps_path, plot=True, dpi=100, leg_len=20,
 
 
 folder_names = ["LR_Strat_L20_H39_Antro_neto_whr", "LR_Strat_L39_Antro_neto_whr"]
-hue_colors_dict = dict(zip(folder_names, ["cyan", "magenta"]))
+hue_colors_dict = dict(list(zip(folder_names, ["cyan", "magenta"])))
 hue_colors_dict
 num_feat = 5
 labels_dict = UKBB_labels_dict
@@ -661,7 +661,7 @@ coeffs_table_obj = LR_Feature_importance(
     font_size=font_size,
     n_boots=10,
     space=0.15,
-    hue_colors_dict=dict(zip(folder_names, ["cyan", "magenta"])),
+    hue_colors_dict=dict(list(zip(folder_names, ["cyan", "magenta"]))),
     linespacing=1,
     plot_type="cat_plot",
     file_names_list=folder_names,
@@ -678,7 +678,7 @@ coeffs_table_obj = LR_Feature_importance(
 base_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/A1c_strat/"
 os.listdir(base_path)
 
-hue_colors_dict = dict(zip(folder_names, ["cyan", "magenta"]))
+hue_colors_dict = dict(list(zip(folder_names, ["cyan", "magenta"])))
 hue_colors_dict
 num_feat = 5
 labels_dict = UKBB_labels_dict
@@ -699,7 +699,7 @@ coeffs_table_obj = LR_Feature_importance(
     font_size=font_size,
     n_boots=10,
     space=0.15,
-    hue_colors_dict=dict(zip(folder_names, ["cyan", "magenta"])),
+    hue_colors_dict=dict(list(zip(folder_names, ["cyan", "magenta"]))),
     linespacing=1,
     plot_type="cat_plot",
     file_names_list=folder_names,

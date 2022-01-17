@@ -520,7 +520,7 @@ class runs:
                                       index_col=0)  # Check that we can read params and build the selected model, train it and make all required drawings
         self.parameters = self.parameters.loc[['SN', 'boost_from_average', 'boosting_type', 'colsample_bytree',
                                                'is_unbalance', 'lambda_l1', 'lambda_l2', 'learning_rate', 'metric',
-                                               'min_child_samples', u'num_boost_round', u'num_threads', 'objective',
+                                               'min_child_samples', 'num_boost_round', 'num_threads', 'objective',
                                                'subsample', 'verbose'], :]
         self.parameters.columns = self.parameters.loc["SN", :]
         self.parameters.drop(index="SN", inplace=True)
@@ -568,17 +568,17 @@ class runs:
             try:
                 (os.makedirs(self.Folder_path))
             except:
-                print("Couldn't create ",self.Folder_path)
+                print(("Couldn't create ",self.Folder_path))
         if not os.path.exists(self.Training_path):
             try:
                 (os.makedirs(self.Training_path))
             except:
-                print("Couldn't create ",self.Training_path)
+                print(("Couldn't create ",self.Training_path))
         if not os.path.exists(self.CI_results_path):
             try:
                 (os.makedirs(self.CI_results_path))
             except:
-                print("Couldn't create ",self.CI_results_path)
+                print(("Couldn't create ",self.CI_results_path))
 
     def calc_CI(self):
         if self.model_type=="SA" or self.model_type=="LR":
@@ -601,8 +601,8 @@ class runs:
                                                     "APS_upper": [self.APS_upper], "APS_lower": [self.APS_lower]})
             CI_Results_DF.index = [self.run_name]
             CI_Results_DF.to_csv(self.CI_results_summary_table)
-            print("Results of",self.run_name,"saved to: ",self.CI_results_summary_table)
-            print("Results are: ",CI_Results_DF)
+            print(("Results of",self.run_name,"saved to: ",self.CI_results_summary_table))
+            print(("Results are: ",CI_Results_DF))
 
         elif self.model_type=="gbdt":
             aucroc_list = []
@@ -629,15 +629,15 @@ class runs:
             results_path=os.path.join(self.CI_results_path, "CI_results.csv")
             CI_Results_DF.to_csv(results_path)
 
-            print ("CI_Results_DF saved to:",results_path)
-            print ("CI_Results_DF are:",CI_Results_DF)
+            print(("CI_Results_DF saved to:",results_path))
+            print(("CI_Results_DF are:",CI_Results_DF))
 
     def calc_CI_percentile(self,metric_list,alpha = 0.95):
         p = ((1.0 - alpha) / 2.0) * 100
         lower = max(0.0, np.percentile(metric_list, p))
         p = (alpha + ((1.0 - alpha) / 2.0)) * 100
         upper = min(1.0, np.percentile(metric_list, p))
-        print('%.1f confidence interval %.1f%% and %.1f%%' % (alpha * 100, lower * 100, upper * 100))
+        print(('%.1f confidence interval %.1f%% and %.1f%%' % (alpha * 100, lower * 100, upper * 100)))
         return lower, upper
 
     def check_exist_CI_files(self):

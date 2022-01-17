@@ -40,7 +40,7 @@ def upload_jobs(q):
         df_predictions = get_predictions(bfile_path)
 
         Params_list = Choose_params(Hyp_Param_Dict)
-        print " SN: ", SN
+        print(" SN: ", SN)
         waiton.append(q.method(Predict, tuple([SN] + Params_list)))
 
     q.waitforresults(waiton)
@@ -56,8 +56,8 @@ def upload_jobs(q):
 
     try:
         shutil.rmtree(SAVE_TO_FOLDER)
-    except OSError, e:
-        print ("Error: %s - %s." % (e.filename, e.strerror))
+    except OSError as e:
+        print(("Error: %s - %s." % (e.filename, e.strerror)))
 
 
 def main():

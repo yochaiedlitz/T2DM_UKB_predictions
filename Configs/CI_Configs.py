@@ -8,6 +8,7 @@ import shutil
 
 class runs:
     def __init__(self,run_name,only_check_model=False,force_update=False,mode=None,debug=False):
+        self.only_check_model=only_check_model
         self.debug=debug
         self.run_name=run_name
         self.force_update=force_update
@@ -21,7 +22,8 @@ class runs:
         self.mode=mode
         self.standardise=True
         self.choose_model()
-        print("Running in ",self.mode," mode")
+        self.update_scoreboards()
+        print(("Running in ",self.mode," mode"))
         if self.force_update:
             self.delete_folders_and_history()
         self.compute_CI = True
@@ -36,50 +38,12 @@ class runs:
         # Val_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_scoretable_val.csv"
         # Train_Val_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_scoretable_train_val.csv"
         # Test_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_Diabetes_scoretable_test.csv"
-        if self.model_type=="gbdt":
-            Train_file_path="/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_train.csv"
-            Val_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_val.csv"
-            Train_Val_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_train_val.csv"
-            Test_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_test.csv"
-        else:
-            Train_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_updates_scoreboard_train.csv"
-            Val_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_updates_scoreboard_val.csv"
-            Train_Val_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_updates_scoreboard_train_val.csv"
-            Test_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_updates_scoreboard_test.csv"
-        if hasattr(self,"mode"):  # Not all models have self.mode
-            # Use self.mode=="Exploring" when you want to explore on the training data without looking at validation data
-            if self.mode == "Exploring" or self.mode == "exploring" or self.mode == "explore":  # Exploring so not using real val data
-                self.train_file_path = Train_file_path
-                self.val_file_path = Val_file_path
-                self.train_val_file_path = Train_file_path
-                self.test_file_path = Val_file_path
-            else:
-                self.train_file_path = Train_file_path
-                self.val_file_path = Val_file_path
-                self.train_val_file_path = Train_Val_file_path
-                self.test_file_path = Test_file_path
-        else:
-            print("Using true validation data")
-            self.train_file_path = Train_file_path
-            self.val_file_path = Test_file_path
-            self.train_val_file_path = Train_Val_file_path
-            if self.test_file_path == None:
-                print("Using general Val file path")
-                self.test_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_Diabetes_returned_extended_Imputed_val.csv"
+        self.set_data_paths()
         if self.model_type=="SA" or self.model_type=="LR":
             self.model_paths=os.path.join(self.Folder_path,self.run_name)
             self.CI_results_path = os.path.join(self.model_paths, "CI")
-
         elif self.model_type=="gbdt" or self.model_type=="GBDT":
-            self.job_name = "Diabetes"
-            self.model_paths = os.path.join(self.Folder_path, self.run_name + "_" + self.job_name)
-            self.final_folder = os.path.join(self.model_paths, "Diabetes_Results")
-            self.CI_results_path = os.path.join(self.final_folder, "CI")
-            self.VERBOSE_EVAL = 1000
-            if not only_check_model:
-                self.Set_GBDT()
-            self.CI_results_path = os.path.join(self.model_paths, "Diabetes_Results/CI")
-
+            self.Set_GBDT()
         self.Training_path = os.path.join(self.model_paths, "training_Results")
         self.CI_results_summary_table = os.path.join(self.CI_results_path, self.run_name + "_CI.csv")
         self.hyper_parameters_summary_table = os.path.join(self.CI_results_path,
@@ -177,6 +141,15 @@ class runs:
             self.mode="explore"
             self.batch_size = 50
 
+
+        elif self.run_name == "LR_Blood_Tests":
+
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/revision"
+            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/"\
+                                          +self.run_name[3:]+".csv"
+            self.model_type = "LR"
+            self.batch_size = 50
+
         elif self.run_name == "LR_Socio_demographics"\
                 or self.run_name == "LR_Age_and_Sex"\
                 or self.run_name == "LR_Physical_health"\
@@ -191,12 +164,10 @@ class runs:
                 or self.run_name == "LR_BT_No_A1c"\
                 or self.run_name == "LR_BP_and_HR"\
                 or self.run_name == "LR_Blood_Tests"\
-                or self.run_name == "LR_Anthropometry"\
-                or self.run_name == "LR_Antro_neto_whr"\
                 or self.run_name == "LR_Five_Blood_Tests"\
                 or self.run_name == "LR_All_No_gen":
 
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/New_Singles_LR/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/Compare_singles_LR/"
             if self.run_name == "LR_All_No_gen":
                 self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/All.csv"
             else:
@@ -205,17 +176,37 @@ class runs:
             self.model_type = "LR"
             self.batch_size = 50
 
+
+        elif self.run_name == "LR_A1_BT__Anthro"\
+                or self.run_name == "LR_A2_Anthro__Physical_Health"\
+                or self.run_name == "LR_A3_Physical_Health__Lifestyle"\
+                or self.run_name == "LR_A4_Lifestyle__BP_n_HR"\
+                or self.run_name == "LR_A5_BP_n_HR__ND_Diagnosis"\
+                or self.run_name == "LR_A6_ND_Diagnosis__Mental"\
+                or self.run_name == "LR_A7_Mental__Medication"\
+                or self.run_name == "LR_A8_Medication__Diet"\
+                or self.run_name == "LR_A9_Diet__Family"\
+                or self.run_name == "LR_A10_Family__ELF"\
+                or self.run_name == "LR_A11_ELF__Socio"\
+                or self.run_name == "LR_All_No_A1c_No_Gluc":
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/compare_addings_LR"
+            base_features_path="/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/Additive/"
+            tmp_features_file=self.run_name[3:]+".csv"
+            self.features_file_path=os.path.join(base_features_path,tmp_features_file)
+            self.model_type = "LR"
+            self.batch_size = 50
+
         elif self.run_name == "LR_Antro_neto_whr_explore"\
                 or self.run_name == "LR_Five_Blood_Tests_explore":
 
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/New_Singles_LR/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
             self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/"\
                                           +self.run_name[3:]+".csv"
             self.features_file_path=self.features_file_path.replace("_explore","")
             self.mode="explore"
             self.model_type = "LR"
             self.batch_size = 25
-
+            self.standardise=True
 
         elif self.run_name == "LR_Blood_Tests_brier"\
                 or self.run_name == "LR_Anthropometry_brier" \
@@ -250,8 +241,9 @@ class runs:
 
         elif self.run_name == "Only_genetics" \
                 or self.run_name == "All_No_A1c_No_Gluc" \
-                or self.run_name == "Genetics_Age_and_Sex":
-                self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/New_Singles/"
+                or self.run_name == "Genetics_Age_and_Sex"\
+                or self.run_name == "All_No_gen":
+                self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/Singles_GBDT/"
                 self.model_type = "gbdt"
                 self.batch_size = 4
 
@@ -312,7 +304,7 @@ class runs:
                 or self.run_name == "All_explore":
             self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/explore_val/"
             self.model_type = "gbdt"
-            self.batch_size = 2
+            self.batch_size = 5
             self.mode = "explore"
 
         elif self.run_name == "Age_and_Sex" \
@@ -330,24 +322,25 @@ class runs:
                 or self.run_name == "BT_No_A1c" \
                 or self.run_name == "Blood_Tests" \
                 or self.run_name == "Five_Blood_Tests" \
+                or self.run_name == "Four_Blood_Tests"\
                 or self.run_name == "Anthropometry"\
                 or self.run_name == "Diet":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/New_Singles/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/Singles_GBDT/"
             self.model_type = "gbdt"
             self.batch_size=25
 
 
         elif self.run_name == "A12_Socio_Genetics"\
                 or self.run_name == "All":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/New_Addings/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/compare_addings_DT"
             self.model_type = "gbdt"
-            self.batch_size = 1
+            self.batch_size = 5
 
         elif self.run_name == "A1_BT__Anthro_explore"\
                 or self.run_name == "A2_Anthro__Physical_Health_explore"\
                 or self.run_name == "A3_Physical_Health__Lifestyle_explore"\
                 or self.run_name == "A4_Lifestyle__BP_n_HR_explore"\
-                or self.run_name == "A5l_BP_n_HR__ND_Diagnosis_explore"\
+                or self.run_name == "A5_BP_n_HR__ND_Diagnosis_explore"\
                 or self.run_name == "A6_ND_Diagnosis__Mental_explore"\
                 or self.run_name == "A7_Mental__Medication_explore"\
                 or self.run_name == "A8_Medication__Diet_explore"\
@@ -373,12 +366,11 @@ class runs:
                 or self.run_name == "A10_Family__ELF"\
                 or self.run_name == "A11_ELF__Socio"\
                 or self.run_name == "All_No_A1c_No_Gluc":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/New_Addings/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/compare_addings_DT"
             self.model_type = "gbdt"
             self.batch_size = 10
 
         elif self.run_name == "LR_Antro_whr_family"\
-                or self.run_name == "LR_Finrisc"\
                 or self.run_name == "LR_Finrisc_w_TTV":
             self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/New_Baseline_compare/"
             self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
@@ -388,7 +380,7 @@ class runs:
 
         elif self.run_name == "LR_Anthro_scoreboard"\
                 or self.run_name == "LR_Five_blood_tests_scoreboard":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/Scoreboards/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
             self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
                                       +self.run_name[3:]+".csv"
             self.standardise = False
@@ -396,11 +388,84 @@ class runs:
             self.batch_size = 20
             self.num_of_bootstraps = 1000
 
+
+        elif self.run_name == "LR_Anthro_scoreboard_revision":
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/revision/"
+            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
+                                      +self.run_name[3:].replace("revision","")+".csv"
+            self.standardise = False
+            self.model_type = "LR"
+            self.batch_size = 20
+            self.num_of_bootstraps = 1000
+
+        elif self.run_name == "LR_Strat_L39_Antro_SB_revision":
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/revision/"
+            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
+                                      +self.run_name[3:].replace("revision","")+".csv"
+            self.standardise = False
+            self.model_type = "LR"
+            self.batch_size = 20
+            self.num_of_bootstraps = 1000
+
+        elif self.run_name == "LR_Strat_L39_Antro_SB_revision":
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/revision/"
+            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
+                                      + self.run_name[3:].replace("revision", "") + ".csv"
+            self.standardise = False
+            self.model_type = "LR"
+            self.batch_size = 20
+            self.num_of_bootstraps = 1000
+
+        elif self.run_name == "LR_Strat_H39_Four_BT_scoreboard_orig": #This is stratifying the scoreboard results by the original LR
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/revision/"
+            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
+                                      + self.run_name[3:].replace("revision", "") + ".csv"
+            self.standardise = False
+            self.model_type = "LR"
+            self.batch_size = 20
+            self.num_of_bootstraps = 1000
+
+        elif self.run_name =="LR_No_reticulocytes" \
+            or self.run_name=="LR_Strat_L39_Four_BT_SB_revision"\
+                or self.run_name == "LR_explore_No_reticulocytes":
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
+            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
+                                      +self.run_name[3:]+".csv"
+            self.standardise = True
+            self.model_type = "LR"
+            self.batch_size = 20
+            self.num_of_bootstraps = 1000
+            if "_explore_" in self.run_name:
+                self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
+                                          + self.run_name[11:] + ".csv"
+                self.mode = "explore"
+            else:
+                self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
+                                          + self.run_name[3:] + ".csv"
+                self.mode = None
+
+
+        elif self.run_name == "LR_No_reticulocytes_scoreboard"\
+                or self.run_name == "LR_explore_No_reticulocytes_scoreboard":
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
+            self.model_type = "LR"
+            self.batch_size = 20
+            self.num_of_bootstraps = 1000
+            self.standardise=False
+            if "_explore_" in self.run_name:
+                self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
+                                          + self.run_name[11:] + ".csv"
+                self.mode="explore"
+            else:
+                self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
+                                          + self.run_name[3:] + ".csv"
+                self.mode=None
+
         elif self.run_name == "LR_Anthro_scoreboard_explore"\
                 or self.run_name == "LR_Five_blood_tests_scoreboard_explore"\
                 or self.run_name=="LR_Anthro_scoreboard_debug"\
                 or self.run_name=="LR_Five_blood_tests_scoreboard_debug":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/Scoreboards/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
             self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/" \
                                       +self.run_name[3:]+".csv"
             self.features_file_path=self.features_file_path.replace("_explore","").replace("_debug","")
@@ -409,22 +474,7 @@ class runs:
             self.batch_size = 20
             self.mode="explore"
 
-        elif self.run_name == "Strat_L39_Antro_neto_whr"\
-                or self.run_name ==  "Strat_L39_A11_minimal"\
-                or self.run_name ==  "Strat_L39_All":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/New_A1c_strat/"
-            self.model_type = "gbdt"
-            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
-                                    "Type of special diet followed": "All", "Minimal_a1c": 39}
-            self.batch_size = 25
 
-        elif self.run_name == "Strat_L20_H39_Antro_neto_whr"\
-             or self.run_name == "Strat_L20_H39_All":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/New_A1c_strat/"
-            self.model_type = "gbdt"
-            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
-                                    "Type of special diet followed": "All", "Minimal_a1c": 20, "Maximal_a1c": 39}
-            self.batch_size = 50
 
         elif self.run_name == "LR_All_No_A1c_No_Gluc"\
                 or self.run_name == "LR_BT_No_A1c":
@@ -436,22 +486,56 @@ class runs:
                 self.batch_size=20
 
         elif self.run_name == "LR_Anthropometry_NO_whr":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/New_Baseline_compare/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/revision/"
             self.features_file_path = \
                 "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/Anthropometry.csv"
             self.model_type = "LR"
             self.batch_size=50
 
         elif self.run_name == "LR_Strat_L39_Antro_neto_whr":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/A1c_strat"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder"
             self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/Antro_neto_whr.csv"
             self.model_type = "LR"
             self.batch_size=50
             self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
                                     "Type of special diet followed": "All", "Minimal_a1c": 39}
 
+        elif self.run_name == "LR_Strat_L39_Antro_neto_whr_scoreboard":
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder"
+            self.model_type = "LR"
+            self.batch_size=50
+            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
+                                    "Type of special diet followed": "All", "Minimal_a1c": 39}
+            self.standardise=False
+
+        elif self.run_name == "LR_Strat_H39_Antro_neto_whr":
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder"
+            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/Antro_neto_whr.csv"
+            self.model_type = "LR"
+            self.batch_size=50
+            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
+                                    "Type of special diet followed": "All", "Maximal_a1c": 39}
+            self.standardise=True
+
+        elif self.run_name == "LR_Strat_H39_Antro_neto_whr_scoreboard":
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/stratified/"
+            self.model_type = "LR"
+            self.batch_size=50
+            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
+                                    "Type of special diet followed": "All", "Maximal_a1c": 39}
+            self.standardise=False
+
+        elif self.run_name == "LR_Strat_L20_H39_Antro_neto_whr_scoreboard":
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/stratified/"
+            self.model_type = "LR"
+            self.batch_size=50
+            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
+                                    "Type of special diet followed": "All", "Maximal_a1c": 39,
+                                    "minimal_a1c":20}
+            self.standardise=False
+
         elif self.run_name == "LR_Strat_L20_H39_Antro_neto_whr":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/A1c_strat"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/stratified/"
             self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/Antro_neto_whr.csv"
             self.model_type = "LR"
             self.batch_size=50
@@ -483,16 +567,74 @@ class runs:
             self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
                                     "Type of special diet followed": "All", "Minimal_a1c": 39}
 
-        elif self.run_name == "LR_Strat_L20_H39_Five_Blood_Tests":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/A1c_strat/"
-            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/Five_Blood_Tests.csv"
+        elif self.run_name == "LR_Strat_L39_Four_Blood_Tests": #No Reticulocytes
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
+            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/No_reticulocytes.csv"
+            self.model_type = "LR"
+            self.batch_size = 50
+            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
+                                    "Type of special diet followed": "All", "Minimal_a1c": 39}
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
+
+        elif self.run_name == "LR_Strat_L39_Four_Blood_Tests_scoreboard_custom": #No Reticulocytes
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
+            self.model_type = "LR"
+            self.batch_size = 50
+            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
+                                    "Type of special diet followed": "All", "Minimal_a1c": 39}
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
+            self.standardise=False
+
+        elif self.run_name == "LR_Strat_H39_Four_Blood_Tests": #No Reticulocytes
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
+            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/No_reticulocytes.csv"
+            self.model_type = "LR"
+            self.batch_size = 50
+            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
+                                    "Type of special diet followed": "All", "Maximal_a1c": 39}
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
+            self.standardise=True
+
+        elif self.run_name == "LR_Strat_L_20_H39_Four_Blood_Tests": #No Reticulocytes
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/stratified/"
+            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/No_reticulocytes.csv"
+            self.model_type = "LR"
+            self.batch_size = 50
+            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
+                                    "Type of special diet followed": "All", "Maximal_a1c": 39,
+                                    "Minimal_a1c": 20}
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
+            self.standardise=True
+
+        elif self.run_name == "LR_Strat_L20_H39_Four_Blood_Tests_scoreboard"\
+                or self.run_name == "LR_Strat_H39_Four_BT_scoreboard_custom": #No Reticulocytes
+            self.model_type = "LR"
+            self.batch_size = 50
+            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
+                                    "Type of special diet followed": "All", "Maximal_a1c": 39,
+                                    "Minimal_a1c":20}
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/stratified/"
+            self.standardise=False
+
+        elif self.run_name == "LR_Strat_H39_Four_Blood_Tests_scoreboard"\
+                or self.run_name == "LR_Strat_H39_Four_BT_scoreboard_custom": #No Reticulocytes
+            self.model_type = "LR"
+            self.batch_size = 50
+            self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
+                                    "Type of special diet followed": "All", "Maximal_a1c": 39}
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/stratified/"
+            self.standardise=False
+
+        elif self.run_name == "LR_Strat_L20_H39_Four_Blood_Tests":
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
+            self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/No_reticulocytes.csv"
             self.model_type = "LR"
             self.batch_size = 50
             self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
                                     "Type of special diet followed": "All", "Minimal_a1c": 20, "Maximal_a1c": 39}
 
         elif self.run_name == "LR_Strat_L39_Finrisc":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/New_A1c_strat/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/stratified"
             self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/Finrisc.csv"
             self.model_type = "LR"
             self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
@@ -500,7 +642,7 @@ class runs:
             self.batch_size=50
 
         elif self.run_name == "LR_Strat_L20_H39_Finrisc":
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/New_A1c_strat/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/stratified"
             self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/Finrisc.csv"
             self.model_type = "LR"
             self.charac_selected = {"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
@@ -531,11 +673,10 @@ class runs:
             self.model_type = "SA"
             self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/New_Baseline_compare/"
             self.compute_CI=True
-
         elif self.run_name=="SA_Strat_L39_GDRS":
             self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/GDRS.csv"
             self.model_type="SA"
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/New_A1c_strat/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/stratified"
             self.compute_CI=True
             self.charac_selected={"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
                    "Type of special diet followed": "All","Minimal_a1c":39}
@@ -543,7 +684,7 @@ class runs:
         elif self.run_name=="SA_Strat_L20_H39_GDRS":
             self.features_file_path = "/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/GDRS.csv"
             self.model_type="SA"
-            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Imputed_screened/New_A1c_strat/"
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/stratified"
             self.compute_CI=True
             self.charac_selected={"Age at last visit": "All", "Sex": "All", "Ethnic background": "All",
                    "Type of special diet followed": "All","Maximal_a1c":39,"Minimal_a1c":20}
@@ -554,31 +695,54 @@ class runs:
             self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/New_Baseline_compare/"
             self.model_type = "gbdt"
 
+        elif self.run_name.startswith("SA_"):
+            self.Folder_path = "/net/mraid08/export/jafar/Yochai/UKBB_Runs/For_article/Revision_runs/results_folder/"
+            self.batch_size = 50
+            self.model_type = "SA"
+            self.compute_CI=True
+
+            base_path="/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/"
+            if self.run_name=="SA_Five_BT":
+                self.features_file_path = base_path+ "Five_Blood_Tests.csv"
+            if self.run_name == "SA_Four_BT_no_retic":
+                self.features_file_path = base_path + "No_reticulocytes.csv"
+            elif self.run_name=="SA_GDRS_revision":
+                self.features_file_path = base_path+"GDRS.csv"
+            elif self.run_name=="SA_Antro_neto_whr":
+                self.features_file_path = base_path + "Antro_neto_whr_SA.csv"
+
         else:
-            print("Model:"+self.run_name+" was not found in CI_configs")
+            print(("Model:"+self.run_name+" was not found in CI_configs"))
 
     def Set_GBDT(self,job_name="Diabetes"):
-        self.best_run = str(pd.read_csv(os.path.join(self.final_folder,self.job_name +
-                                                     "_result_sorted.csv"), index_col=0).index.values[0])
+        self.job_name = "Diabetes"
+        self.model_paths = os.path.join(self.Folder_path, self.run_name + "_" + self.job_name)
+        self.final_folder = os.path.join(self.model_paths, "Diabetes_Results")
+        self.CI_results_path = os.path.join(self.final_folder, "CI")
+        self.VERBOSE_EVAL = 1000
+        if not self.only_check_model:
+            self.CI_results_path = os.path.join(self.model_paths, "Diabetes_Results/CI")
+            self.best_run = str(pd.read_csv(os.path.join(self.final_folder,self.job_name +
+                                                         "_result_sorted.csv"), index_col=0).index.values[0])
 
-        with open(os.path.join(self.final_folder,"Rel_Feat_Names"), 'rb') as fp:
-            self.Rel_Feat_Names = pickle.load(fp)
-        with open(os.path.join(self.final_folder,"cat_names"), 'rb') as fp:
-            self.cat_names = pickle.load(fp)
+            with open(os.path.join(self.final_folder,"Rel_Feat_Names"), 'rb') as fp:
+                self.Rel_Feat_Names = pickle.load(fp)
+            with open(os.path.join(self.final_folder,"cat_names"), 'rb') as fp:
+                self.cat_names = pickle.load(fp)
 
-        self.parameters = pd.read_csv(os.path.join(self.final_folder,self.job_name + "_Parameters_Table.csv"),
-                                      index_col=0)  # Check that we can read params and build the selected model, train it and make all required drawings
-        self.parameters = self.parameters.loc[['SN', 'boost_from_average', 'boosting_type', 'colsample_bytree',
-                                               'is_unbalance', 'lambda_l1', 'lambda_l2', 'learning_rate', 'metric',
-                                               'min_child_samples', u'num_boost_round', u'num_threads', 'objective',
-                                               'subsample', 'verbose'], :]
-        self.parameters.columns = self.parameters.loc["SN", :]
-        self.parameters.drop(index="SN", inplace=True)
-        self.params_dict = self.parameters.loc[:, self.best_run].to_dict()
+            self.parameters = pd.read_csv(os.path.join(self.final_folder,self.job_name + "_Parameters_Table.csv"),
+                                          index_col=0)  # Check that we can read params and build the selected model, train it and make all required drawings
+            self.parameters = self.parameters.loc[['SN', 'boost_from_average', 'boosting_type', 'colsample_bytree',
+                                                   'is_unbalance', 'lambda_l1', 'lambda_l2', 'learning_rate', 'metric',
+                                                   'min_child_samples', 'num_boost_round', 'num_threads', 'objective',
+                                                   'subsample', 'verbose'], :]
+            self.parameters.columns = self.parameters.loc["SN", :]
+            self.parameters.drop(index="SN", inplace=True)
+            self.params_dict = self.parameters.loc[:, self.best_run].to_dict()
 
-        self.cat_ind = [x for x, name in enumerate(self.Rel_Feat_Names) if name in self.cat_names]
-        self.params_bu = self.params_dict
-        self.CI_load_data()
+            self.cat_ind = [x for x, name in enumerate(self.Rel_Feat_Names) if name in self.cat_names]
+            self.params_bu = self.params_dict
+            self.CI_load_data()
 
     def CI_load_data(self):
         data_path = self.final_folder
@@ -615,22 +779,23 @@ class runs:
         self.X_val = self.X_val.loc[use_index,Use_Columns]
         self.y_val = self.y_val .loc[use_index,Use_Columns]
 
+    def mkdirIfnotExist(self,dir_path):
+        print(("checking if %(dir_path)s exists" % {"dir_path": dir_path}))
+        if type(dir_path) is list:
+            for dir_p in dir_path:
+                self.mkdirIfnotExist(dir_p)
+        else:
+            mother_dir = os.path.dirname(dir_path)
+            if not os.path.isdir(mother_dir):
+                self.mkdirIfnotExist(mother_dir)
+            if not os.path.isdir(dir_path):
+                os.mkdir(dir_path)
+                print(("created: ", dir_path))
+
     def create_dir(self):
-        if not os.path.exists(self.Folder_path):
-            try:
-                (os.makedirs(self.Folder_path))
-            except:
-                print("Couldn't create ",self.Folder_path)
-        if not os.path.exists(self.Training_path):
-            try:
-                (os.makedirs(self.Training_path))
-            except:
-                print("Couldn't create ",self.Training_path)
-        if not os.path.exists(self.CI_results_path):
-            try:
-                (os.makedirs(self.CI_results_path))
-            except:
-                print("Couldn't create ",self.CI_results_path)
+        self.mkdirIfnotExist(self.Folder_path)
+        self.mkdirIfnotExist(self.Training_path)
+        self.mkdirIfnotExist(self.CI_results_path)
 
     def calc_CI(self,results_df=[]):
         if self.model_type=="SA" or self.model_type=="LR":
@@ -654,8 +819,8 @@ class runs:
                                                     "APS_upper": [self.APS_upper], "APS_lower": [self.APS_lower]})
             CI_Results_DF.index = [self.run_name]
             CI_Results_DF.to_csv(self.CI_results_summary_table)
-            print("Results of",self.run_name,"saved to: ",self.CI_results_summary_table)
-            print("Results are: ",CI_Results_DF)
+            print(("Results of",self.run_name,"saved to: ",self.CI_results_summary_table))
+            print(("Results are: ",CI_Results_DF))
             return CI_Results_DF
         elif self.model_type=="gbdt":
             aucroc_list = []
@@ -682,15 +847,15 @@ class runs:
             results_path=os.path.join(self.CI_results_path, "CI_results.csv")
             CI_Results_DF.to_csv(results_path)
 
-            print ("CI_Results_DF saved to:",results_path)
-            print ("CI_Results_DF are:",CI_Results_DF)
+            print(("CI_Results_DF saved to:",results_path))
+            print(("CI_Results_DF are:",CI_Results_DF))
 
     def calc_CI_percentile(self,metric_list,alpha = 0.95):
         p = ((1.0 - alpha) / 2.0) * 100
         lower = max(0.0, np.percentile(metric_list, p))
         p = (alpha + ((1.0 - alpha) / 2.0)) * 100
         upper = min(1.0, np.percentile(metric_list, p))
-        print('%.1f confidence interval %.1f%% and %.1f%%' % (alpha * 100, lower * 100, upper * 100))
+        print(('%.1f confidence interval %.1f%% and %.1f%%' % (alpha * 100, lower * 100, upper * 100)))
         return lower, upper
 
     def check_exist_CI_files(self):
@@ -710,10 +875,50 @@ class runs:
         delete_folder=os.path.join(self.Folder_path, self.run_name)
         try:
             shutil.rmtree(delete_folder)
-            print("deleted:\n", delete_folder)
+            print(("deleted:\n", delete_folder))
         except:
-            print("No such folder\n",delete_folder)
-            print("couldn't delete: \n", delete_folder)
+            print(("No such folder\n",delete_folder))
+            print(("couldn't delete: \n", delete_folder))
+
+    def update_scoreboards(self):
+        if "scoreboard" in self.run_name or "Scoreboard" in self.run_name:
+            self.standardise = False
+            self.features_file_path = os.path.join("/home/edlitzy/Biobank/Diabetes_Features_lists/For_article/",
+                                                   self.run_name+"_features_list.csv")
+        else:
+            self.standardise = True
+
+    def set_data_paths(self):
+        if self.model_type == "gbdt":
+            self._tmp_Train_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_train.csv"
+            self._tmp_Val_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_val.csv"
+            self._tmp_Train_Val_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_train_val.csv"
+            self._tmp_Test_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_test.csv"
+        else:
+            self._tmp_Train_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_updates_scoreboard_train.csv"
+            self._tmp_Val_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_updates_scoreboard_val.csv"
+            self._tmp_Train_Val_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_updates_scoreboard_train_val.csv"
+            self._tmp_Test_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_a1c_below_65_updates_scoreboard_test.csv"
+        if hasattr(self, "mode"):  # Not all models have self.mode
+            # Use self.mode=="Exploring" when you want to explore on the training data without looking at validation data
+            if self.mode == "Exploring" or self.mode == "exploring" or self.mode == "explore":  # Exploring so not using real val data
+                self.train_file_path = self._tmp_Train_file_path
+                self.val_file_path = self._tmp_Val_file_path
+                self.Train_Val_file_path = self._tmp_Train_file_path
+                self.test_file_path = self._tmp_Val_file_path
+            else:
+                self.train_file_path = self._tmp_Train_file_path
+                self.val_file_path = self._tmp_Val_file_path
+                self.train_val_file_path = self._tmp_Train_Val_file_path
+                self.test_file_path = self._tmp_Test_file_path
+        else:
+            print("Using true validation data")
+            self.train_file_path = self._tmp_Train_file_path
+            self.val_file_path = self._tmp_Test_file_path
+            self.train_val_file_path = self._tmp_Train_Val_file_path
+            if self.test_file_path == None:
+                print("Using general Val file path")
+                self.test_file_path = "/net/mraid08/export/jafar/UKBioBank/Data/ukb29741_Diabetes_returned_extended_Imputed_val.csv"
 # class RunParams:
 #     #For GBDT runs
 #     def __init__(self,model_path_name=[],BASIC_PROB_BASED_JOB_NAME=[],num_of_bootstraps=1000):

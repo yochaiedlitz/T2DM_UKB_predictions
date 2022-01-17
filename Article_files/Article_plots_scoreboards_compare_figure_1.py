@@ -61,14 +61,14 @@ colors_df = pd.read_csv("/home/edlitzy/UKBB_Tree_Runs/For_article/colors.csv", i
 colors_df
 folder_path = "/home/edlitzy/UKBB_Tree_Runs/For_article/Imputed_screened/New_Baseline_compare"
 fig_path = "/home/edlitzy/UKBB_Tree_Runs/For_article/Imputed_screened/figures/scoreboards_compare/Quantlites_baseline_compare.jpg"
-print(os.listdir(folder_path))
+print((os.listdir(folder_path)))
 
 xlabels = [str(x) for x in np.arange(1, 11)]
 colors_df = pd.read_csv("/home/edlitzy/UKBB_Tree_Runs/For_article/colors.csv", index_col="File name")
 
 folder_path = "/home/edlitzy/UKBB_Tree_Runs/For_article/Imputed_screened/New_Baseline_compare"
 fig_path = "/home/edlitzy/UKBB_Tree_Runs/For_article/Imputed_screened/figures/scoreboards_compare/Quantlites_baseline_compare.jpg"
-print(os.listdir(folder_path))
+print((os.listdir(folder_path)))
 # all_dirs=['A1c_strat', 'New_Addings', 'New_Singles', 'New_Singles_LR']
 folders_basename_list = ['SA_GDRS', 'LR_Finrisc', 'LR_Antro_neto_whr', 'LR_Five_Blood_Tests',
                          "All_Diabetes"]
@@ -248,3 +248,4 @@ comp_roc_groups(
     low_recogniser='4<=HbA1c%<5.7',
 
 )
+#%%

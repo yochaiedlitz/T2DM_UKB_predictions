@@ -52,7 +52,7 @@ def read_bfile_forsumstats(bfile_path):
     #impute SNPs according to external MAFs    
     print ('imputing SNPs using external MAFs...')
     isNan = np.isnan(bed.val)
-    for i in xrange(bed.sid.shape[0]):
+    for i in range(bed.sid.shape[0]):
         bed.val[isNan[:,i], i] = 2*allele_freqs[i] #Binomical distibution average, consider using external imputations. There is an imputation file
         
     #standardize SNPs using external MAfs
@@ -388,13 +388,13 @@ def get_predictions(bfile_path):
     files_dict = get_files_dict()    
     df_predictions = pd.DataFrame(index=bed.iid[:,1].astype(np.int))
 
-    for f_i,(trait, sumstats_file) in enumerate(files_dict.iteritems()):
+    for f_i,(trait, sumstats_file) in enumerate(files_dict.items()):
         
         ###if (trait not in ['bmi', 'height', 'hdl', 'creatinine', 'glucose2']): continue
         ###if (trait not in ['glucose_iris']): continue
         
         #read summary statistics file
-        print ('reading summary statistics and performing prediction for %s...'%(trait))
+        print(('reading summary statistics and performing prediction for %s...'%(trait)))
         if (trait == 'creatinine'): df_sumstats = pd.read_csv(sumstats_file, sep=',')
         else: df_sumstats = pd.read_csv(sumstats_file, delim_whitespace=True)        
         found_snp_col = False
@@ -541,10 +541,10 @@ def Personal_PRS(bfile_path,ID,full_predictions=None,res=0.025): #Calculate a si
     df_predictions = pd.DataFrame(index=bed.iid[:, 1].astype(np.int))
     personal_predictions = pd.DataFrame(index=[ID])
     personal_quantiles = pd.DataFrame(index=[ID])
-    for f_i, (trait, sumstats_file) in enumerate(files_dict.iteritems()):
+    for f_i, (trait, sumstats_file) in enumerate(files_dict.items()):
 
         # read summary statistics file
-        print 'reading summary statistics and performing prediction for %s...' % (trait)
+        print('reading summary statistics and performing prediction for %s...' % (trait))
         if (trait == 'creatinine'):
             df_sumstats = pd.read_csv(sumstats_file, sep=',')
         else:
@@ -728,7 +728,7 @@ def All_Traits_Top_SNPs(final_folder,dict_name,n_snps=1000):
     snp_name_col = False
     trait_dict = {}
     files_dict = get_files_dict()
-    for f_i, (trait, sumstats_file) in enumerate(files_dict.iteritems()):
+    for f_i, (trait, sumstats_file) in enumerate(files_dict.items()):
         # read summary statistics file
         #     print 'reading summary statistics and performing prediction for',trait,' at CHR#', str(CHR_Num)
         if (trait == 'creatinine'):
@@ -752,7 +752,7 @@ def All_Traits_Top_SNPs(final_folder,dict_name,n_snps=1000):
             break
         assert found_snp_col, 'No SNP column found'
 
-        print "SNP COL NAME for trait:", trait, ' is:', snp_name_col
+        print("SNP COL NAME for trait:", trait, ' is:', snp_name_col)
 
         df_sumstats = df_sumstats.loc[:, [snp_name_col, P_Name]]
         df_sumstats.set_index(snp_name_col, inplace=True, drop=True)
@@ -775,11 +775,11 @@ def extract_relevant_SNPS(top_P_dict,bfile_path, Results_Folder, Job_Name, CHR_N
     df_merge = {}
     is_snp_found = {}
     df_ID_SNPs_for_trait = {}
-    for trait in top_P_dict.iterkeys():
+    for trait in top_P_dict.keys():
         df_merge[trait] = df_bed.merge(top_P_dict[trait].reset_index(), left_on='rs', right_on='SNP')
         df_merge[trait] = df_merge[trait].drop_duplicates(subset="rs")
         df_merge[trait] = df_merge[trait].set_index('rs', drop=True)
-        print df_merge[trait].head()
+        print(df_merge[trait].head())
         df_merge_snps_set = set(df_merge[trait].index.values)
         is_snp_found[trait] = [(s in df_merge_snps_set) for s in bed.sid]
         df_ID_SNPs_for_trait[trait] = pd.DataFrame(data=bed.val[:, is_snp_found[trait]],
@@ -791,7 +791,7 @@ def extract_relevant_SNPS(top_P_dict,bfile_path, Results_Folder, Job_Name, CHR_N
 
 def get_UKBB_predictions(bfile_path, Results_Folder, Job_Name, CHR_Num):
     """Function that gets bfile of persons and computes their PRS"""
-    print "Started CHR#", CHR_Num
+    print("Started CHR#", CHR_Num)
     bed = read_bfile_forsumstats(bfile_path)  # bfile_path for the bed file
     df_bim = pd.read_csv(bfile_path + '.bim', delim_whitespace=True, header=None,
                          names=['chr', 'rs', 'cm', 'bp', 'a1', 'a2'])  # List of al SNPS
@@ -801,13 +801,13 @@ def get_UKBB_predictions(bfile_path, Results_Folder, Job_Name, CHR_Num):
     files_dict = get_files_dict()
     df_predictions = pd.DataFrame(index=bed.iid[:, 1].astype(np.int))
     df_predictions.index.name = "eid"
-    for f_i, (trait, sumstats_file) in enumerate(files_dict.iteritems()):
+    for f_i, (trait, sumstats_file) in enumerate(files_dict.items()):
 
         ###if (trait not in ['bmi', 'height', 'hdl', 'creatinine', 'glucose2']): continue
         ###if (trait not in ['glucose_iris']): continue
 
         # read summary statistics file
-        print 'reading summary statistics and performing prediction for',trait,' at CHR#', str(CHR_Num)
+        print('reading summary statistics and performing prediction for',trait,' at CHR#', str(CHR_Num))
         if (trait == 'creatinine'):
             df_sumstats = pd.read_csv(sumstats_file, sep=',')
         else:
@@ -821,15 +821,15 @@ def get_UKBB_predictions(bfile_path, Results_Folder, Job_Name, CHR_Num):
             found_snp_col = True
             break
         assert found_snp_col, 'No SNP column found'
-        print "SNP COL NAME for trait:", trait,' is:',snp_name_col
+        print("SNP COL NAME for trait:", trait,' is:',snp_name_col)
 
         df_sumstats.drop_duplicates(subset=snp_name_col, inplace=True)
         df_merge = df_bed.merge(df_sumstats, left_on='rs', right_on=snp_name_col)
-        print "df_merge.shape[0] according to RSID is: ", df_merge.shape[0],"(i.e. number of recognised SNPS of trarit", \
-            trait, " of CHR: ", str(CHR_Num), "of Jobname: ", Job_Name, " )"
+        print("df_merge.shape[0] according to RSID is: ", df_merge.shape[0],"(i.e. number of recognised SNPS of trarit", \
+            trait, " of CHR: ", str(CHR_Num), "of Jobname: ", Job_Name, " )")
 
         if df_merge.shape[0] == 0:
-            print "No RS numbers, merging according to CHR:BP using HG37"
+            print("No RS numbers, merging according to CHR:BP using HG37")
             try:
                 df_merge = df_bed.merge(df_sumstats, left_on=['chr', "bp"], right_on=["CHR", "BP"])
             except:
@@ -847,7 +847,7 @@ def get_UKBB_predictions(bfile_path, Results_Folder, Job_Name, CHR_Num):
 
 
         if df_merge.shape[0]==0:
-            print "No matching SNPS Found for: ",bfile_path, "for trait:", trait
+            print("No matching SNPS Found for: ",bfile_path, "for trait:", trait)
 
         df_merge_snps_set = set(df_merge['rs'])
         is_snp_found = [(s in df_merge_snps_set) for s in bed.sid]
@@ -984,32 +984,32 @@ def get_UKBB_predictions(bfile_path, Results_Folder, Job_Name, CHR_Num):
 
         df_predictions.loc[df_predictions.index, 'predict_' + trait] = (bed.val[:, is_snp_found]).dot(
             effects)  # Performing the dot product
-        print "Finished trait#",trait," in chromosom number", CHR_Num,"Which is:",str(f_i),"out of", len(files_dict)
+        print("Finished trait#",trait," in chromosom number", CHR_Num,"Which is:",str(f_i),"out of", len(files_dict))
 
     df_predictions.to_csv(Results_Folder+Job_Name+"_CHR_"+CHR_Num+".csv")
-    print "Finished CHR#", CHR_Num
+    print("Finished CHR#", CHR_Num)
 
 def Convert_to_Class(trait, Results_Folder):
-    print "Start reading csv:", trait
+    print("Start reading csv:", trait)
     CSV_file = pd.read_csv(Results_Folder + "Final_Raw_SNPs" + trait + ".csv")
-    print "Finished reading csv:", trait
+    print("Finished reading csv:", trait)
     uniques={}
-    print trait
-    print CSV_file
+    print(trait)
+    print(CSV_file)
     # print CSV_Dict[trait].isna().sum()
     CSV_file.set_index("eid", inplace=True, drop=True)
-    print "Started filna:", trait
+    print("Started filna:", trait)
     CSV_file = CSV_file.fillna("-1")
-    print CSV_file.isnull().sum()
+    print(CSV_file.isnull().sum())
     for col in CSV_file.columns.values:
         uniques[col] = CSV_file.loc[:, col].unique()
         for ind, val in enumerate(uniques[col]):
             if np.issubdtype(type(val), np.number):
                 CSV_file.loc[CSV_file.loc[:, col] == val, col] = str(int(ind + 1))
-        print CSV_file.loc[:, col].head()
-    print "Started saving:", trait
+        print(CSV_file.loc[:, col].head())
+    print("Started saving:", trait)
     CSV_file.to_csv(path_or_buf=Results_Folder + "Final_Results/Final_SNPs_" + trait + ".csv", index=True)
-    print "finished trait :",trait
+    print("finished trait :",trait)
 
     
     

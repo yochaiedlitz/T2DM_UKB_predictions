@@ -16,7 +16,7 @@ BASIC_PROB_BASED_JOB_NAME = [x for x in BASIC_JOB_NAME]
 Sub_Class_array = ["All"]  # "All",, "All"
 Job_ID = ["2443-0.0"]
 RET_FEAT_file_names = BASIC_JOB_NAME
-Batch_size=2
+Batch_size=10
 feat_list_folder = "Diabetes_Features_lists/For_article/"  # Folder where the features lists located
 FEAT_file_names = ["Diabetes_Features_0705"]  # Diabetes_Features.csv,Diabetes_Features_No_Baseline.csv,Baseline_Features.csv,Diabetes_Features_Lifestyle.csv,Diabetes_Features_No_Baseline.csv, Full_Diabetes_Features # "Diabetes_Features.csv","Diabetes_Features.csv","Diabetes_Features.csv",BMI_Features_Lifestyle.csv
 # Features File name without ending
@@ -76,7 +76,7 @@ Select_Top_Traits_Gen_arr_names = ['HbA1c_MANTRA', 't2d_mega_meta', "MAGIC_Scott
 USE_FAKE_QUE = False
 load_saved_data=False
 NROWS = None  # 1-500000 or None
-NROWS_RETURN =None  # How many returning participants to load
+NROWS_RETURN =5000  # How many returning participants to load
 Split = False #Wheter or not to split data to train and test, should be false only for final testing
 Use_imp_flag=True
 Logistic_regression=True #"Should be LR for Linear regression or LGBM for treees"
@@ -95,7 +95,7 @@ Prob_HYP_PAR_ITER = 200
 
 MEM = '30G'
 N_THREADS = 5
-P_THREADS = 2
+P_THREADS = 5
 
 Calc_Base_Prob = False
 CALC_SHAP = False  # Whether or not to calculate the SHAP values for the basic probabilities
@@ -103,7 +103,6 @@ SORT = False  # Used mostly for debugging to activate the SORT_AUC_APS function
 # Refit_model - path to model to be refitted in the first visit
 Refit_Model = None  # '/net/mraid08/export/jafar/UKBioBank/Yochai/UKBB_Runs/Refit/Refit_BL2AF_Diabetes/Diabetes_Results/Diabetes_shap_model.txt'#None##Name of the model to be refitted or None
 # /net/mraid08/export/jafar/Yochai/UKBB_Runs/AF_To_refit2_Diabetes/Diabetes_Results
-Finalize_Only = False
 
 Calc_Prob_Based_Prob = True
 RE_USE_PROBA = False
@@ -114,6 +113,7 @@ Refit_Return_Model_Path = None  # '/net/mraid08/export/jafar/Yochai/UKBB_Runs/mo
 HowHow = "left"  # "inner" - take only participants who has probabilities for other disease as well, "left" - take all
 CALC_P_SHAP = False  # Whether or not to calculate the SHAP values for the Preob based predictions
 SORT_Prob = True
+Finalize_Only=False
 Finalize_Prob_Based_Only = False
 
 if REFIT_SERIAL_MODELS or Refit_Return_Model_Path:
@@ -122,7 +122,7 @@ else:
     Refit_Returned = False
 
 VISITS = [0, 1, 2]  # [0,1,2]
-NUM_OF_DEP_PLOT = 10
+NUM_OF_DEP_PLOT = 0
 
 Lite = False  # Used for debug
 
@@ -168,7 +168,7 @@ Hyp_Param_Dict_A['bagging_freq'] = [0, 1, 5]
 Hyp_Param_Dict_A['bagging_fraction'] = [0.25, 0.5, 0.75, 1]
 
 # Hyp_Param_Dict_R['max_depth']=[2,4,8,16]
-Hyp_Param_Dict_A['num_leaves'] = [2, 4, 8, 16, 32, 64, 128]
+Hyp_Param_Dict_R['num_leaves'] = [2, 4, 8, 16, 32, 64, 128]
 Hyp_Param_Dict_R['is_unbalance'] = [True]
 Hyp_Param_Dict_R['objective'] = ['binary']
 Hyp_Param_Dict_R['boosting_type'] = ['gbdt']

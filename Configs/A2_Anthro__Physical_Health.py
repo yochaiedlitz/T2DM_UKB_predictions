@@ -78,14 +78,14 @@ NFOLD = 5
 Choose_N_Fold = 3  # How many CV to make for the initial Cross validation when choosing the hyperparameters
 
 Basic_HYP_PAR_ITER = 2
-Prob_HYP_PAR_ITER = 200
+Prob_HYP_PAR_ITER = 200#200
 
 MEM = '3G'
-N_THREADS = 10
+N_THREADS = 5
 P_THREADS = 2
 
 Calc_Base_Prob = False
-CALC_SHAP = True  # Whether or not to calculate the SHAP values for the basic probabilities
+CALC_SHAP = False  # Whether or not to calculate the SHAP values for the basic probabilities
 SORT = True  # Used mostly for debugging to activate the SORT_AUC_APS function
 # Refit_model - path to model to be refitted in the first visit
 Refit_Model = None  # '/net/mraid08/export/jafar/UKBioBank/Yochai/UKBB_Runs/Refit/Refit_BL2AF_Diabetes/Diabetes_Results/Diabetes_shap_model.txt'#None##Name of the model to be refitted or None
@@ -99,7 +99,7 @@ REFIT_SERIAL_MODELS = False  # #Checking wether to refit a model folder just mad
 # Refit_Return_Model_Path - path to model to be refitted in the first visit
 Refit_Return_Model_Path = None  # '/net/mraid08/export/jafar/Yochai/UKBB_Runs/mock_refit/Diabetes_Results/'#'/net/mraid08/export/jafar/UKBioBank/Yochai/UKBB_Runs/Refit/Refit_BL2AF_Diabetes/Diabetes_Results/'#None#
 HowHow = "left"  # "inner" - take only participants who has probabilities for other disease as well, "left" - take all
-CALC_P_SHAP = True  # Whether or not to calculate the SHAP values for the Preob based predictions
+CALC_P_SHAP = False  # Whether or not to calculate the SHAP values for the Preob based predictions
 SORT_Prob = True
 Finalize_Prob_Based_Only = False
 
